@@ -1,0 +1,28 @@
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+extend-select = ["I"]
+
+[tool.poetry]
+name = "coderunner"
+version = "0"
+description = "A flexible code-running bot."
+authors = ["CircuitSacul <circuitsacul@icloud.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+hikari = "^2.0.0.dev117"
+hikari-crescent = "^0.6.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+ruff = "^0.0.258"
+mypy = "^1.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
