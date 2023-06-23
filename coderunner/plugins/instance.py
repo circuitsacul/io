@@ -26,6 +26,8 @@ async def on_modal(event: hikari.InteractionCreateEvent) -> None:
         return
 
     inst.language.user_update(event.interaction.components[0].components[0].value)
+    if rt := inst.valid_runtimes:
+        inst.runtime.v = rt[0]
     await event.app.rest.create_interaction_response(
         event.interaction,
         event.interaction.token,
@@ -233,6 +235,7 @@ class Instance:
             not (runtimes := self.valid_runtimes)
             or self.advanced
             or self.runtime.overwritten
+            or self.runtime.v is None
         ):
             select = plugin.app.rest.build_message_action_row().add_text_menu(
                 "version", is_disabled=not runtimes
