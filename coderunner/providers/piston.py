@@ -24,4 +24,4 @@ class Piston(Provider):
         pass
 
     async def execute(self, instance: Instance) -> models.Result:
-        return models.Result(str(instance))
+        return models.Result(str(instance) + "\n\n" + str(self))
