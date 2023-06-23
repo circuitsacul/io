@@ -14,13 +14,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.12"
-hikari = "^2.0.0.dev117"
-hikari-crescent = "^0.6.0"
+hikari = "^2.0.0.dev120"
+hikari-crescent = "^0.6.1"
 python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
-ruff = "^0.0.258"
+ruff = "^0.0.275"
 mypy = "^1.1.1"
 
 [build-system]

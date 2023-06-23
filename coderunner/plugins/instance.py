@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import typing as t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import crescent
 import hikari
@@ -45,7 +45,17 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
         return
     id = event.interaction.custom_id
 
-    if id == "toggle_advanced":
+    if id == "reset":
+        message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
+        new_inst = await Instance.from_original(message, inst.requester)
+        if new_inst is None:
+            await plugin.app.rest.delete_message(
+                inst.channel, event.interaction.message.id
+            )
+            return
+        inst = new_inst
+        instances[event.interaction.message.id] = inst
+    elif id == "toggle_advanced":
         inst.advanced = not inst.advanced
     elif id == "toggle_mode":
         if inst.action.v is models.Action.RUN:
@@ -61,11 +71,23 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
             event.interaction.token,
             title="Select Language",
             custom_id="language",
-            component=event.app.rest.build_modal_action_row()
-            .add_text_input("language", "Language")
-            .add_to_container(),
+            component=event.app.rest.build_modal_action_row().add_text_input(
+                "language", "Language"
+            ),
         )
         return
+    elif id == "version":
+        assert inst.valid_runtimes is not None
+        for runtime in inst.valid_runtimes:
+            if runtime.id == event.interaction.values[0]:
+                inst.runtime.user_update(runtime)
+    elif id == "code_block":
+        for x, block in enumerate(inst.codes):
+            if str(x) == event.interaction.values[0]:
+                inst.code.user_update(block)
+                if block.language:
+                    inst.language.v = block.language
+                    inst.language.overwritten = False
 
     await event.app.rest.create_interaction_response(
         event.interaction,
@@ -91,6 +113,10 @@ class Setting(t.Generic[T]):
             self.v = v
             self.overwritten = True
 
+    @classmethod
+    def make(cls, v: T) -> Setting[T]:
+        return field(default_factory=lambda: cls(v))
+
 
 @dataclass
 class Instance:
@@ -100,30 +126,35 @@ class Instance:
     codes: list[models.Code]
 
     advanced: bool = False
-    code: Setting[t.Optional[models.Code]] = Setting(None)
-    language: Setting[t.Optional[str]] = Setting(None)
-    runtime: Setting[t.Optional[models.Runtime]] = Setting(None)
-    action: Setting[models.Action] = Setting(models.Action.RUN)
+    code: Setting[t.Optional[models.Code]] = Setting.make(None)
+    language: Setting[t.Optional[str]] = Setting.make(None)
+    runtime: Setting[t.Optional[models.Runtime]] = Setting.make(None)
+    action: Setting[models.Action] = Setting.make(models.Action.RUN)
 
     response: t.Optional[hikari.Snowflake] = None
 
     @property
     def valid_runtimes(self) -> list[models.Runtime] | None:
-        for name, runtimes in plugin.model.manager.runtimes.items():
-            if name == self.language.v:
-                return [rt for rt in runtimes if rt.action is self.action.v]
-        return None
+        if not self.language.v:
+            return None
+        runtimes = plugin.model.manager.get_runtimes(self.language.v)
+        if not runtimes:
+            return None
+        return [rt for rt in runtimes if rt.action is self.action.v]
 
     @staticmethod
     async def from_original(
-        message: hikari.Message, requester: hikari.Snowflake
+        message: hikari.Message,
+        requester: hikari.Snowflake,
+        code: models.Code | None = None,
     ) -> Instance | None:
         codes = await parse.get_codes(message)
         if not codes:
             return None
 
         instance = Instance(message.channel_id, message.id, requester, codes)
-        code = codes[0]
+        if not code:
+            code = codes[0]
         instance.code = Setting(code)
         if code.language and (
             runtimes := plugin.model.manager.get_runtimes(code.language)
@@ -135,52 +166,67 @@ class Instance:
         return instance
 
     async def update(self, message: hikari.Message) -> None:
-        new = await Instance.from_original(message, self.requester)
+        new = await Instance.from_original(
+            message, self.requester, code=self.code.v if self.code.overwritten else None
+        )
         if not new:
             return
 
         self.codes = new.codes
         if not self.code.overwritten:
             self.code = new.code
-        if not self.language.overwritten:
-            self.language = new.language
+            if not self.language.overwritten:
+                self.language = new.language
         if not self.action.overwritten:
             self.action = new.action
 
     def components(self) -> list[hikari.api.MessageActionRowBuilder]:
         rows = []
 
+        language: str | None
+        if self.language.v:
+            language = plugin.model.manager.aliases.get(
+                self.language.v, self.language.v
+            )
+        else:
+            language = self.language.v
+
         # basic buttons
         rows.append(
             plugin.app.rest.build_message_action_row()
-            .add_button(hikari.ButtonStyle.SECONDARY, "toggle_advanced")
-            .set_emoji("⚙️")
-            .add_to_container()
-            .add_button(hikari.ButtonStyle.SECONDARY, "toggle_mode")
-            .set_label("Assembly" if self.action.v is models.Action.RUN else "Run Code")
-            .add_to_container()
-            .add_button(hikari.ButtonStyle.SECONDARY, "language")
-            .set_label(f"Language: {self.language.v or 'Unknown'}")
-            .add_to_container()
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY,
+                "toggle_advanced",
+                label="Simple" if self.advanced else "Advanced",
+            )
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY, "reset", label="Reset"
+            )
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY,
+                "toggle_mode",
+                label="Assembly" if self.action.v is models.Action.RUN else "Run Code",
+            )
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY,
+                "language",
+                label=f"Language: {language or 'Unkown'}",
+            )
         )
 
         # code block selection
-        if len(self.codes) > 1 and (self.advanced or self.code.overwritten):
-            select = (
-                plugin.app.rest.build_message_action_row()
-                .add_select_menu(3, "code_block")
-                .set_placeholder("Select the code block to run")
+        if len(self.codes) > 1:
+            select = plugin.app.rest.build_message_action_row().add_text_menu(
+                "code_block",
+                placeholder="Select the code block to run",
             )
             for x, block in enumerate(self.codes):
                 if block.filename:
                     label = f"Attachment {block.filename}"
                 else:
                     label = f'Code Block: "{block.code[0:32]}..."'
-                option = select.add_option(label, str(x))
-                if block == self.code.v:
-                    option = option.set_is_default(True)
-                select = option.add_to_menu()
-            rows.append(select.add_to_container())
+                select.add_option(label, str(x), is_default=block == self.code.v)
+            rows.append(select.parent)
 
         # version selection
         if (
@@ -188,27 +234,25 @@ class Instance:
             or self.advanced
             or self.runtime.overwritten
         ):
-            select = plugin.app.rest.build_message_action_row().add_select_menu(
-                3, "version"
+            select = plugin.app.rest.build_message_action_row().add_text_menu(
+                "version", is_disabled=not runtimes
             )
             for runtime in runtimes or ():
-                option = select.add_option(
-                    f"{runtime.version} ({runtime.provider})", runtime.id
+                select.add_option(
+                    f"{runtime.version} ({runtime.provider})",
+                    runtime.id,
+                    is_default=(
+                        self.runtime.v is not None and runtime.id == self.runtime.v.id
+                    ),
                 )
-                if self.runtime.v and runtime.id == self.runtime.v.id:
-                    option = option.set_is_default(True)
-                select = option.add_to_menu()
             if not runtimes:
                 mode = "execution" if self.action.v is models.Action.RUN else "assembly"
-                select = (
-                    select.add_option(
-                        f"No runtimes for {self.language.v} in {mode} mode.", "na"
-                    )
-                    .set_is_default(True)
-                    .add_to_menu()
-                    .set_is_disabled(True)
+                select.add_option(
+                    f"No runtimes for {language} in {mode} mode.",
+                    "na",
+                    is_default=True,
                 )
-            rows.append(select.add_to_container())
+            rows.append(select.parent)
 
         return rows
 
