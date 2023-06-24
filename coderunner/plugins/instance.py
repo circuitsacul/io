@@ -14,6 +14,16 @@ plugin = Plugin()
 instances: dict[hikari.Snowflake, Instance] = {}
 
 
+K = t.TypeVar("K")
+V = t.TypeVar("V")
+
+
+def sole_or_get(dct: dict[K, V], key: K) -> V | None:
+    if len(dct) == 1:
+        return next(iter(dct.values()))
+    return dct.get(key)
+
+
 @plugin.include
 @crescent.event
 async def on_modal(event: hikari.InteractionCreateEvent) -> None:
@@ -65,14 +75,15 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
         new_inst.response = inst.response
         inst = new_inst
         instances[event.interaction.message.id] = inst
-    elif id == "toggle_mode":
-        if inst.action is models.Action.RUN:
-            inst.update_action(models.Action.ASM)
+    elif id == "code_block":
+        if v := event.interaction.values:
+            for x, block in enumerate(inst.codes):
+                if str(x) == v[0]:
+                    inst.update_code(block)
+                    break
         else:
-            inst.update_action(models.Action.RUN)
-        if rt := inst.valid_runtimes:
-            inst.runtime.overwritten = False
-            inst.runtime.v = rt[0]
+            if inst.codes:
+                inst.update_code(inst.codes[0])
     elif id == "language":
         await event.app.rest.create_modal_response(
             event.interaction,
@@ -84,29 +95,29 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
             ),
         )
         return
+    elif id == "toggle_mode":
+        if inst.action is models.Action.RUN:
+            inst.update_action(models.Action.ASM)
+        else:
+            inst.update_action(models.Action.RUN)
+    elif id == "instruction_set":
+        if v := event.interaction.values:
+            inst.instruction_set = v[0]
+        else:
+            inst.instruction_set = None
+        inst.compiler_type = None
+        inst.version = None
+    elif id == "compiler_type":
+        if v := event.interaction.values:
+            inst.compiler_type = v[0]
+        else:
+            inst.compiler_type = None
+        inst.version = None
     elif id == "version":
-        assert inst.valid_runtimes is not None
-        if event.interaction.values:
-            v = event.interaction.values[0]
-            for runtime in inst.valid_runtimes:
-                if runtime.id == event.interaction.values[0]:
-                    inst.update_runtime(runtime)
-                    break
-            else:
-                inst.update_runtime(None)
+        if v := event.interaction.values:
+            inst.version = v[0]
         else:
-            inst.update_runtime(None)
-    elif id == "code_block":
-        try:
-            v = event.interaction.values[0]
-        except IndexError:
-            if inst.codes:
-                inst.update_code(inst.codes[0])
-        else:
-            for x, block in enumerate(inst.codes):
-                if str(x) == v:
-                    inst.update_code(block)
-                    break
+            inst.version = None
 
     await event.app.rest.create_interaction_response(
         event.interaction,
@@ -147,8 +158,10 @@ class Instance:
 
     code: t.Optional[models.Code] = None
     language: Setting[t.Optional[str]] = Setting.make(None)
-    runtime: Setting[t.Optional[models.Runtime]] = Setting.make(None)
     action: models.Action = models.Action.RUN
+    instruction_set: str | None = None
+    compiler_type: str | None = None
+    version: str | None = None
 
     response: t.Optional[hikari.Snowflake] = None
 
@@ -157,34 +170,77 @@ class Instance:
         if code and code.language and not self.language.overwritten:
             self.update_language(code.language, False)
 
-    def update_action(self, action: models.Action) -> None:
-        self.action = action
-
-        self.update_runtime(None)
-
     def update_language(self, language: str | None, user: bool) -> None:
         if user:
             self.language.user_update(language)
         else:
             self.language.update(language)
-        self.update_runtime(None)
 
-    def update_runtime(self, runtime: models.Runtime | None) -> None:
-        if not runtime:
-            if rt := self.valid_runtimes:
-                self.runtime.update(rt[0])
-                return
+        self.reset_selectors()
 
-        self.runtime.user_update(runtime)
+    def update_action(self, action: models.Action) -> None:
+        self.action = action
+
+        self.reset_selectors()
+
+    def reset_selectors(self) -> None:
+        self.instruction_set = None
+        self.compiler_type = None
+        self.version = None
+
+    def selectors(self) -> list[tuple[str, str | None, list[str | None]]]:
+        if self.language.v is None:
+            return []
+
+        selectors: list[tuple[str, str | None, list[str | None]]] = []
+
+        runtimes = plugin.model.manager.runtimes
+        if self.action is models.Action.RUN:
+            if run_tree := runtimes.run.get(self.language.v):
+                selectors.append(("version", self.version, list(run_tree)))
+        else:
+            if instructions := sole_or_get(runtimes.asm, self.language.v):
+                selectors.append(
+                    ("instruction_set", self.instruction_set, list(instructions))
+                )
+
+                if compilers := sole_or_get(instructions, self.instruction_set):
+                    selectors.append(
+                        ("compiler_type", self.compiler_type, list(compilers))
+                    )
+
+                    if versions := sole_or_get(compilers, self.compiler_type):
+                        selectors.append(("version", self.version, list(versions)))
+
+        return selectors
 
     @property
-    def valid_runtimes(self) -> list[models.Runtime] | None:
-        if not self.language.v:
+    def runtime(self) -> models.Runtime | None:
+        lang = self.language.v
+
+        def get_run_runtime() -> models.Runtime | None:
+            tree = plugin.model.manager.runtimes.run
+            if lang in tree:
+                return sole_or_get(tree[lang], self.version)
+
             return None
-        runtimes = plugin.model.manager.get_runtimes(self.language.v)
-        if not runtimes:
-            return None
-        return [rt for rt in runtimes if rt.action is self.action]
+
+        def get_asm_runtime() -> models.Runtime | None:
+            tree = plugin.model.manager.runtimes.asm
+            if not (tree2 := tree.get(lang)):
+                return None
+
+            if not (tree3 := sole_or_get(tree2, self.instruction_set)):
+                return None
+            if not (tree4 := sole_or_get(tree3, self.compiler_type)):
+                return None
+
+            return sole_or_get(tree4, self.version)
+
+        if self.action is models.Action.RUN:
+            return get_run_runtime()
+        else:
+            return get_asm_runtime()
 
     @staticmethod
     async def from_original(
@@ -210,14 +266,6 @@ class Instance:
     def components(self) -> list[hikari.api.MessageActionRowBuilder]:
         rows = []
 
-        language: str | None
-        if self.language.v:
-            language = plugin.model.manager.aliases.get(
-                self.language.v, self.language.v
-            )
-        else:
-            language = self.language.v
-
         # basic buttons
         rows.append(
             plugin.app.rest.build_message_action_row()
@@ -234,7 +282,7 @@ class Instance:
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
                 "language",
-                label=f"Language: {language or 'Unkown'}",
+                label=f"Language: {self.language.v or 'Unkown'}",
             )
         )
 
@@ -252,27 +300,17 @@ class Instance:
                 select.add_option(label, str(x), is_default=block == self.code)
             rows.append(select.parent)
 
-        # version selection
-        runtimes = self.valid_runtimes
-        select = plugin.app.rest.build_message_action_row().add_text_menu(
-            "version", is_disabled=not runtimes
-        )
-        for runtime in runtimes or ():
-            select.add_option(
-                f"{runtime.version} ({runtime.provider})",
-                runtime.id,
-                is_default=(
-                    self.runtime.v is not None and runtime.id == self.runtime.v.id
-                ),
-            )
-        if not runtimes:
-            mode = "execution" if self.action is models.Action.RUN else "assembly"
-            select.add_option(
-                f"No runtimes for {language} in {mode} mode.",
-                "na",
-                is_default=True,
-            )
-        rows.append(select.parent)
+        # version
+        for id, selected, options in self.selectors():
+            if len(options) == 1:
+                continue
+
+            select = plugin.app.rest.build_message_action_row().add_text_menu(id)
+            for option in options[0:25]:
+                select.add_option(
+                    str(option), str(option), is_default=option == selected
+                )
+            rows.append(select.parent)
 
         return rows
 
@@ -281,8 +319,8 @@ class Instance:
             await plugin.app.rest.trigger_typing(self.channel)
 
         # try to execute code
-        if self.runtime.v:
-            ret = await self.runtime.v.provider.execute(self)
+        if self.runtime:
+            ret = await self.runtime.provider.execute(self)
             out = ret.output
         else:
             out = None

@@ -17,6 +17,7 @@ python = ">=3.8,<3.12"
 hikari = "^2.0.0.dev120"
 hikari-crescent = "^0.6.1"
 python-dotenv = "^1.0.0"
+aiohttp = "^3.8.4"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

@@ -3,8 +3,11 @@ from __future__ import annotations
 import abc
 import typing as t
 
+import aiohttp
+
+from coderunner import models
+
 if t.TYPE_CHECKING:
-    from coderunner import models
     from coderunner.app import Model
     from coderunner.plugins.instance import Instance
 
@@ -12,6 +15,21 @@ if t.TYPE_CHECKING:
 class Provider(abc.ABC):
     def __init__(self, model: Model) -> None:
         self.model = model
+        self.runtimes = models.RuntimeTree()
+        self._session: aiohttp.ClientSession | None = None
+
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        assert self._session, "aiohttp session not initialized"
+        return self._session
+
+    async def shutdown(self) -> None:
+        if self._session and not self._session.closed:
+            await self._session.close()
+
+    @abc.abstractmethod
+    async def startup(self) -> None:
+        ...
 
     @abc.abstractmethod
     async def execute(self, instance: Instance) -> models.Result:
@@ -19,10 +37,6 @@ class Provider(abc.ABC):
 
     @abc.abstractmethod
     async def update_data(self) -> None:
-        ...
-
-    @abc.abstractproperty
-    def languages(self) -> dict[str, list[models.Runtime]]:
         ...
 
     def __str__(self) -> str:

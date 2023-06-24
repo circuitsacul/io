@@ -15,28 +15,33 @@ if t.TYPE_CHECKING:
 class Manager:
     def __init__(self, model: Model) -> None:
         self.providers: list[Provider] = [GodBolt(model), Piston(model)]
-        self.runtimes: dict[str, list[models.Runtime]] = {}
+        self.runtimes = models.RuntimeTree()
         self.aliases: dict[str, str] = {}
         self.model = model
+
+    async def startup(self) -> None:
+        await asyncio.gather(
+            *(asyncio.create_task(p.startup()) for p in self.providers)
+        )
+
+    async def shutdown(self) -> None:
+        await asyncio.gather(
+            *(asyncio.create_task(p.shutdown()) for p in self.providers)
+        )
 
     async def update_data(self) -> None:
         await asyncio.gather(
             *(asyncio.create_task(p.update_data()) for p in self.providers)
         )
 
-        languages: dict[str, list[models.Runtime]] = {}
+        runtimes = models.RuntimeTree()
         for provider in self.providers:
-            for name, langs in provider.languages.items():
-                languages.setdefault(name, []).extend(langs)
-                for alias in (alias for lang in langs for alias in lang.aliases):
-                    self.aliases[alias] = name
-        self.runtimes = languages
+            runtimes.extend(provider.runtimes)
+        runtimes.sort()
+        self.runtimes = runtimes
 
-    def get_runtimes(self, language: str) -> list[models.Runtime] | None:
-        if langs := self.runtimes.get(language):
-            return langs
+    def unalias(self, language: str) -> str | None:
+        if language in self.runtimes.run or language in self.runtimes.asm:
+            return language
 
-        if name := self.aliases.get(language):
-            return self.get_runtimes(name)
-
-        return None
+        return self.aliases.get(language)
