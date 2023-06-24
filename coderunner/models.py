@@ -16,17 +16,6 @@ class Action(Enum):
 
 
 @dataclass
-class Support:
-    run: bool
-    asm: bool
-
-    def supports(self, action: Action) -> bool:
-        if action is Action.RUN:
-            return self.run
-        return self.asm
-
-
-@dataclass
 class Runtime:
     id: str
     name: str
