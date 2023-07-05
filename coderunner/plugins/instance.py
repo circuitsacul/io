@@ -372,7 +372,7 @@ class Instance:
             else:
                 out = f"```ansi\n{out}\n```"
         else:
-            out = None
+            out = "No runtime selected."
 
         # send message
         rows = self.components()
