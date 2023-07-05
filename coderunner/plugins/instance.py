@@ -79,6 +79,7 @@ async def on_modal(event: hikari.InteractionCreateEvent) -> None:
         hikari.ResponseType.MESSAGE_UPDATE,
         components=inst.components(),
         content="Working...",
+        attachment=None,
     )
     await inst.execute()
 
@@ -145,6 +146,7 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
         event.interaction.token,
         hikari.ResponseType.MESSAGE_UPDATE,
         content="Working...",
+        attachment=None,
         components=inst.components(),
     )
     await inst.execute()
