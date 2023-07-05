@@ -92,6 +92,17 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
 
     if not (inst := instances.get(event.interaction.message.id)):
         return
+
+    if event.interaction.user.id == inst.requester:
+        await event.app.rest.create_interaction_response(
+            event.interaction,
+            event.interaction.token,
+            hikari.ResponseType.MESSAGE_CREATE,
+            flags=hikari.MessageFlag.EPHEMERAL,
+            content="Only the person who created this instance can edit it.",
+        )
+        return None
+
     id = event.interaction.custom_id
 
     if id == "refresh_code":
