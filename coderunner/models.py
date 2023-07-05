@@ -7,7 +7,10 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
+import dahlia
+
 from coderunner.providers.provider import Provider
+from coderunner.utils.display import format_text
 
 
 class Action(Enum):
@@ -34,8 +37,16 @@ class Code:
 class Result:
     output: str
 
+    def format(self) -> str:
+        out = format_text(self.output)
+        try:
+            out = dahlia.quantize_ansi(out, to=3)
+        except Exception:
+            pass
+        return out
 
-ASM_TREE_T = t.Dict[
+
+TREE_T = t.Dict[
     str | None,  # language
     t.Dict[
         str | None,  # Instruction Set
@@ -48,32 +59,24 @@ ASM_TREE_T = t.Dict[
         ],
     ],
 ]
-RUN_TREE_T = t.Dict[str, t.Dict[str | None, Runtime]]
 
 
-def make_asm_tree() -> ASM_TREE_T:
+def make_tree() -> TREE_T:
     return defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-
-
-def make_run_tree() -> RUN_TREE_T:
-    return defaultdict(dict)
 
 
 @dataclass
 class RuntimeTree:
-    asm: ASM_TREE_T = field(default_factory=make_asm_tree)
-    run: RUN_TREE_T = field(default_factory=make_run_tree)
+    asm: TREE_T = field(default_factory=make_tree)
+    run: TREE_T = field(default_factory=make_tree)
 
     def extend(self, other: RuntimeTree) -> None:
-        for lang, tree in other.asm.items():
-            for compiler, tree2 in tree.items():
-                for instruction, tree3 in tree2.items():
-                    for version, runtime in tree3.items():
-                        self.asm[lang][compiler][instruction][version] = runtime
-
-        for lang, tree4 in other.run.items():
-            for version, runtime in tree4.items():
-                self.run[lang][version] = runtime
+        for this_tree, other_tree in [(self.asm, other.asm), (self.run, other.run)]:
+            for lang, tree in other_tree.items():
+                for compiler, tree2 in tree.items():
+                    for instruction, tree3 in tree2.items():
+                        for version, runtime in tree3.items():
+                            this_tree[lang][compiler][instruction][version] = runtime
 
     def sort(self) -> None:
         self.asm = sort(self.asm)
@@ -95,6 +98,11 @@ class Key:
         assert isinstance(other, Key)
         if self.semver and other.semver:
             return self.semver < other.semver
+
+        if self.string == "piston":
+            return True
+        elif other.string == "piston":
+            return False
 
         return self.string > other.string
 

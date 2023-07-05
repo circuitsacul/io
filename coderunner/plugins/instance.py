@@ -9,6 +9,7 @@ import hikari
 
 from coderunner import models
 from coderunner.app import Plugin
+from coderunner.lang_defaults import DEFAULTS
 from coderunner.utils import parse
 
 plugin = Plugin()
@@ -19,9 +20,32 @@ K = t.TypeVar("K")
 V = t.TypeVar("V")
 
 
-def get_or_first(dct: dict[K, V], key: K) -> tuple[K, V] | None:
+def next_in_default_chain(path: list[str | None]) -> str | None:
+    tree = DEFAULTS
+    for k in path:
+        if isinstance(tree, str):
+            return None
+        tree = tree.get(k)  # type: ignore
+        if not tree:
+            return None
+
+    if isinstance(tree, str):
+        return tree
+    elif isinstance(tree, dict):
+        return next(iter(tree.keys()))
+    return None
+
+
+def get_or_first(
+    dct: dict[str | None, V], key: str | None, path: list[str | None]
+) -> tuple[str | None, V] | None:
     with contextlib.suppress(KeyError):
         return (key, dct[key])
+
+    if k := next_in_default_chain(path):
+        with contextlib.suppress(KeyError):
+            return (k, dct[k])
+
     with contextlib.suppress(StopIteration):
         return next(iter(dct.items()))
 
@@ -199,31 +223,34 @@ class Instance:
         selectors: list[tuple[str, str | None, list[str | None]]] = []
 
         runtimes = plugin.model.manager.runtimes
-        if self.action is models.Action.RUN:
-            if run_tree := runtimes.run.get(self.language.v):
-                if rt := get_or_first(run_tree, self.version):
-                    version, _ = rt
-                    selectors.append(("version", version, list(run_tree)))
-        else:
-            if instructions := runtimes.asm.get(self.language.v):
-                if instruction_set_select := get_or_first(
-                    instructions, self.instruction_set
+        match self.action:
+            case models.Action.RUN:
+                tree = runtimes.run
+            case models.Action.ASM:
+                tree = runtimes.asm
+
+        path: list[str | None] = []
+        if instructions := tree.get(self.language.v):
+            path.append(self.language.v)
+            if instruction_set_select := get_or_first(
+                instructions, self.instruction_set, path
+            ):
+                instruction_set, compilers = instruction_set_select
+                selectors.append(
+                    ("instruction_set", instruction_set, list(instructions))
+                )
+                path.append(instruction_set)
+
+                if compiler_type_select := get_or_first(
+                    compilers, self.compiler_type, path
                 ):
-                    instruction_set, compilers = instruction_set_select
+                    compiler, versions = compiler_type_select
+                    selectors.append(("compiler_type", compiler, list(compilers)))
+                    path.append(compiler)
 
-                    selectors.append(
-                        ("instruction_set", instruction_set, list(instructions))
-                    )
-
-                    if compiler_type_select := get_or_first(
-                        compilers, self.compiler_type
-                    ):
-                        compiler, versions = compiler_type_select
-                        selectors.append(("compiler_type", compiler, list(compilers)))
-
-                        if version_select := get_or_first(versions, self.version):
-                            version, _ = version_select
-                            selectors.append(("version", version, list(versions)))
+                    if version_select := get_or_first(versions, self.version, path):
+                        version, _ = version_select
+                        selectors.append(("version", version, list(versions)))
 
         return selectors
 
@@ -231,34 +258,27 @@ class Instance:
     def runtime(self) -> models.Runtime | None:
         lang = self.language.v
 
-        def get_run_runtime() -> models.Runtime | None:
-            tree = plugin.model.manager.runtimes.run
-            if lang in tree:
-                if rt := get_or_first(tree[lang], self.version):
-                    return rt[1]
+        match self.action:
+            case models.Action.RUN:
+                tree = plugin.model.manager.runtimes.run
+            case models.Action.ASM:
+                tree = plugin.model.manager.runtimes.asm
 
+        path: list[str | None] = [lang]
+        if not (tree2 := tree.get(lang)):
             return None
 
-        def get_asm_runtime() -> models.Runtime | None:
-            tree = plugin.model.manager.runtimes.asm
-            if not (tree2 := tree.get(lang)):
-                return None
-
-            if not (tree3 := get_or_first(tree2, self.instruction_set)):
-                return None
-            if not (tree4 := get_or_first(tree3[1], self.compiler_type)):
-                return None
-
-            tree5 = get_or_first(tree4[1], self.version)
-            if tree5:
-                return tree5[1]
-            else:
-                return None
-
-        if self.action is models.Action.RUN:
-            return get_run_runtime()
+        if not (tree3 := get_or_first(tree2, self.instruction_set, path)):
+            return None
+        path.append(tree3[0])
+        if not (tree4 := get_or_first(tree3[1], self.compiler_type, path)):
+            return None
+        path.append(tree4[0])
+        tree5 = get_or_first(tree4[1], self.version, path)
+        if tree5:
+            return tree5[1]
         else:
-            return get_asm_runtime()
+            return None
 
     @staticmethod
     async def from_original(
@@ -338,9 +358,17 @@ class Instance:
             await plugin.app.rest.trigger_typing(self.channel)
 
         # try to execute code
+        att: hikari.Bytes | None = None
+        out: str | None
         if self.runtime:
             ret = await self.runtime.provider.execute(self)
-            out = ret.output
+            out = ret.format()
+
+            if len(out) > 1_950:
+                att = hikari.Bytes(out, "output.ansi")
+                out = None
+            else:
+                out = f"```ansi\n{out}\n```"
         else:
             out = None
 
@@ -348,7 +376,7 @@ class Instance:
         rows = self.components()
         if self.response:
             await plugin.app.rest.edit_message(
-                self.channel, self.response, out, components=rows
+                self.channel, self.response, out, components=rows, attachment=att
             )
         else:
             resp = await plugin.app.rest.create_message(
@@ -357,6 +385,7 @@ class Instance:
                 reply=self.message,
                 mentions_reply=True,
                 components=rows,
+                attachment=att or hikari.UNDEFINED,
             )
             self.response = resp.id
             instances[resp.id] = self

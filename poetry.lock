@@ -327,6 +327,17 @@ colorama = {version = "*", markers = "sys_platform == \"win32\""}
 development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
+name = "dahlia"
+version = "2.3.2"
+description = "A library allowing you to use Minecraft format codes in strings."
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "dahlia-2.3.2-py3-none-any.whl", hash = "sha256:5c654807ed6174b9ab1379813728026ab302f79fcc1a3a567adaa2d16e126a3c"},
+    {file = "dahlia-2.3.2.tar.gz", hash = "sha256:8872180125942f031c65bad0da7a6e30be5c2926d52c071a5d7c7ef0cef397f6"},
+]
+
+[[package]]
 name = "forbiddenfruit"
 version = "0.1.4"
 description = "Patch python built-in objects"
@@ -814,4 +825,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "b14ff3016c3eac2341f0680a69c5c740f2cd59ddc6f5d2fa65014a72c8298a1a"
+content-hash = "29f3d2d9c12898e04ac572e57a42fbac25cea2c3c4452adf07c6c1f37da88dc7"

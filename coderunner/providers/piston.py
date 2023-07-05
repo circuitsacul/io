@@ -36,7 +36,7 @@ class Piston(Provider):
                     provider=self,
                 )
 
-                runtimes.run[data["language"]][version] = runtime
+                runtimes.run[data["language"]]["piston"]["piston"][version] = runtime
 
         self.runtimes = runtimes
 
