@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import typing as t
 from dataclasses import dataclass, field
 
@@ -18,10 +19,13 @@ K = t.TypeVar("K")
 V = t.TypeVar("V")
 
 
-def sole_or_get(dct: dict[K, V], key: K) -> V | None:
-    if len(dct) == 1:
-        return next(iter(dct.values()))
-    return dct.get(key)
+def get_or_first(dct: dict[K, V], key: K) -> tuple[K, V] | None:
+    with contextlib.suppress(KeyError):
+        return (key, dct[key])
+    with contextlib.suppress(StopIteration):
+        return next(iter(dct.items()))
+
+    return None
 
 
 @plugin.include
@@ -197,20 +201,29 @@ class Instance:
         runtimes = plugin.model.manager.runtimes
         if self.action is models.Action.RUN:
             if run_tree := runtimes.run.get(self.language.v):
-                selectors.append(("version", self.version, list(run_tree)))
+                if rt := get_or_first(run_tree, self.version):
+                    version, _ = rt
+                    selectors.append(("version", version, list(run_tree)))
         else:
-            if instructions := sole_or_get(runtimes.asm, self.language.v):
-                selectors.append(
-                    ("instruction_set", self.instruction_set, list(instructions))
-                )
+            if instructions := runtimes.asm.get(self.language.v):
+                if instruction_set_select := get_or_first(
+                    instructions, self.instruction_set
+                ):
+                    instruction_set, compilers = instruction_set_select
 
-                if compilers := sole_or_get(instructions, self.instruction_set):
                     selectors.append(
-                        ("compiler_type", self.compiler_type, list(compilers))
+                        ("instruction_set", instruction_set, list(instructions))
                     )
 
-                    if versions := sole_or_get(compilers, self.compiler_type):
-                        selectors.append(("version", self.version, list(versions)))
+                    if compiler_type_select := get_or_first(
+                        compilers, self.compiler_type
+                    ):
+                        compiler, versions = compiler_type_select
+                        selectors.append(("compiler_type", compiler, list(compilers)))
+
+                        if version_select := get_or_first(versions, self.version):
+                            version, _ = version_select
+                            selectors.append(("version", version, list(versions)))
 
         return selectors
 
@@ -221,7 +234,8 @@ class Instance:
         def get_run_runtime() -> models.Runtime | None:
             tree = plugin.model.manager.runtimes.run
             if lang in tree:
-                return sole_or_get(tree[lang], self.version)
+                if rt := get_or_first(tree[lang], self.version):
+                    return rt[1]
 
             return None
 
@@ -230,12 +244,16 @@ class Instance:
             if not (tree2 := tree.get(lang)):
                 return None
 
-            if not (tree3 := sole_or_get(tree2, self.instruction_set)):
+            if not (tree3 := get_or_first(tree2, self.instruction_set)):
                 return None
-            if not (tree4 := sole_or_get(tree3, self.compiler_type)):
+            if not (tree4 := get_or_first(tree3[1], self.compiler_type)):
                 return None
 
-            return sole_or_get(tree4, self.version)
+            tree5 = get_or_first(tree4[1], self.version)
+            if tree5:
+                return tree5[1]
+            else:
+                return None
 
         if self.action is models.Action.RUN:
             return get_run_runtime()
@@ -302,10 +320,11 @@ class Instance:
 
         # version
         for id, selected, options in self.selectors():
-            if len(options) == 1:
-                continue
-
-            select = plugin.app.rest.build_message_action_row().add_text_menu(id)
+            select = (
+                plugin.app.rest.build_message_action_row()
+                .add_text_menu(id)
+                .set_is_disabled(len(options) == 1)
+            )
             for option in options[0:25]:
                 select.add_option(
                     str(option), str(option), is_default=option == selected
