@@ -307,9 +307,20 @@ class Instance:
         instance.update_code(codes[0])
 
         return instance
+    
+    async def delete(self) -> None:
+        if not self.response:
+            return
+        try:
+            await plugin.app.rest.delete_message(self.channel, self.response)
+        except hikari.NotFoundError:
+            pass
+        else:
+            del instances[self.response]
 
     async def update(self, message: hikari.Message) -> None:
         if not (codes := await parse.get_codes(message)):
+            await self.delete()
             return
 
         self.codes = codes
@@ -321,6 +332,9 @@ class Instance:
         # basic buttons
         rows.append(
             plugin.app.rest.build_message_action_row()
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY, "delete", label="Delete"
+            )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY, "refresh_code", label="Refresh Code"
             )
