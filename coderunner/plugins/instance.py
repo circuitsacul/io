@@ -199,6 +199,8 @@ class Instance:
             self.update_language(code.language, False)
 
     def update_language(self, language: str | None, user: bool) -> None:
+        if language:
+            language = plugin.model.manager.unalias(language.lower())
         if user:
             self.language.user_update(language)
         else:
@@ -320,7 +322,7 @@ class Instance:
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
                 "language",
-                label=f"Language: {self.language.v or 'Unkown'}",
+                label=f"Language: {self.language.v or 'Unknown'}",
             )
         )
 

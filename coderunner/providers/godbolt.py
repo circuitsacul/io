@@ -20,19 +20,6 @@ class GodBolt(Provider):
     async def update_data(self) -> None:
         runtimes = models.RuntimeTree()
 
-        # async with self.session.get(self.URL + "languages/") as resp:
-        #     resp.raise_for_status()
-        #     print("languages")
-        #     for data in await resp.json():
-        #         print(data["id"])
-        #         runtime = models.Runtime(
-        #             id=data["id"],
-        #             name=data["name"],
-        #             description=data["name"],
-        #             provider=self,
-        #         )
-        #         runtimes.run[data["id"]]["godbolt"] = runtime
-
         async with self.session.get(self.URL + "compilers/") as resp:
             resp.raise_for_status()
             for data in await resp.json():

@@ -4,6 +4,7 @@ import asyncio
 import typing as t
 
 from coderunner import models
+from coderunner.aliases import ALIASES
 from coderunner.providers.godbolt import GodBolt
 from coderunner.providers.piston import Piston
 from coderunner.providers.provider import Provider
@@ -16,7 +17,6 @@ class Manager:
     def __init__(self, model: Model) -> None:
         self.providers: list[Provider] = [GodBolt(model), Piston(model)]
         self.runtimes = models.RuntimeTree()
-        self.aliases: dict[str, str] = {}
         self.model = model
 
     async def startup(self) -> None:
@@ -44,4 +44,4 @@ class Manager:
         if language in self.runtimes.run or language in self.runtimes.asm:
             return language
 
-        return self.aliases.get(language)
+        return ALIASES.get(language)
