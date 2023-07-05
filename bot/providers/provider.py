@@ -5,11 +5,11 @@ import typing as t
 
 import aiohttp
 
-from coderunner import models
+from bot import models
 
 if t.TYPE_CHECKING:
-    from coderunner.app import Model
-    from coderunner.plugins.instance import Instance
+    from bot.app import Model
+    from bot.plugins.instance import Instance
 
 
 class Provider(abc.ABC):

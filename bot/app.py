@@ -4,7 +4,7 @@ import crescent
 import dotenv
 import hikari
 
-from coderunner.manager import Manager
+from bot.manager import Manager
 
 Plugin = crescent.Plugin[hikari.GatewayBot, "Model"]
 INTENTS = hikari.Intents.ALL_UNPRIVILEGED | hikari.Intents.MESSAGE_CONTENT
@@ -40,5 +40,5 @@ def main() -> None:
     async def _(_: hikari.StoppingEvent) -> None:
         await model.shutdown()
 
-    client.plugins.load_folder("coderunner.plugins")
+    client.plugins.load_folder("bot.plugins")
     app.run()

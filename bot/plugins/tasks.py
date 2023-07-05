@@ -1,6 +1,6 @@
 from crescent.ext import tasks
 
-from coderunner.app import Plugin
+from bot.app import Plugin
 
 plugin = Plugin()
 

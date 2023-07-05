@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 import crescent
 import hikari
 
-from coderunner import models
-from coderunner.app import Plugin
-from coderunner.lang_defaults import DEFAULTS
-from coderunner.utils import parse
+from bot import models
+from bot.app import Plugin
+from bot.lang_defaults import DEFAULTS
+from bot.utils import parse
 
 plugin = Plugin()
 instances: dict[hikari.Snowflake, Instance] = {}

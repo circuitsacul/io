@@ -5,7 +5,7 @@ import typing as t
 
 from hikari import Attachment, Message
 
-from coderunner import models
+from bot import models
 
 CODE_BLOCK_REGEX = re.compile(r"```(?P<lang>\w*)[\n\s]*(?P<code>(.|\n)*?)```")
 CODE_LINE_REGEX = re.compile(r"`(?P<code>[^`\n]+)`")

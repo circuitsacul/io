@@ -5,7 +5,8 @@ strict = true
 extend-select = ["I"]
 
 [tool.poetry]
-name = "coderunner"
+name = "io"
+packages = [{ include = "bot" }]
 version = "0"
 description = "A flexible code-running bot."
 authors = ["CircuitSacul <circuitsacul@icloud.com>"]

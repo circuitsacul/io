@@ -1,9 +1,9 @@
 import crescent
 import hikari
 
-from coderunner import models
-from coderunner.app import Plugin
-from coderunner.plugins.instance import Instance
+from bot import models
+from bot.app import Plugin
+from bot.plugins.instance import Instance
 
 plugin = Plugin()
 

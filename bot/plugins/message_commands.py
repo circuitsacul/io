@@ -1,7 +1,7 @@
 import crescent
 import hikari
 
-from coderunner.app import Plugin
+from bot.app import Plugin
 
 from .instance import Instance
 

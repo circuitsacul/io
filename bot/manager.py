@@ -3,14 +3,14 @@ from __future__ import annotations
 import asyncio
 import typing as t
 
-from coderunner import models
-from coderunner.aliases import ALIASES
-from coderunner.providers.godbolt import GodBolt
-from coderunner.providers.piston import Piston
-from coderunner.providers.provider import Provider
+from bot import models
+from bot.aliases import ALIASES
+from bot.providers.godbolt import GodBolt
+from bot.providers.piston import Piston
+from bot.providers.provider import Provider
 
 if t.TYPE_CHECKING:
-    from coderunner.app import Model
+    from bot.app import Model
 
 
 class Manager:

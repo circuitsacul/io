@@ -4,12 +4,12 @@ import typing as t
 
 import aiohttp
 
-from coderunner import models
-from coderunner.providers.provider import Provider
-from coderunner.utils.fixes import transform_code
+from bot import models
+from bot.providers.provider import Provider
+from bot.utils.fixes import transform_code
 
 if t.TYPE_CHECKING:
-    from coderunner.plugins.instance import Instance
+    from bot.plugins.instance import Instance
 
 
 class Piston(Provider):

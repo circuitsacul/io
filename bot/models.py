@@ -9,8 +9,8 @@ from enum import Enum, auto
 
 import dahlia
 
-from coderunner.providers.provider import Provider
-from coderunner.utils.display import format_text
+from bot.providers.provider import Provider
+from bot.utils.display import format_text
 
 
 class Action(Enum):
