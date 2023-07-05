@@ -93,7 +93,7 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
     if not (inst := instances.get(event.interaction.message.id)):
         return
 
-    if event.interaction.user.id == inst.requester:
+    if event.interaction.user.id != inst.requester:
         await event.app.rest.create_interaction_response(
             event.interaction,
             event.interaction.token,
