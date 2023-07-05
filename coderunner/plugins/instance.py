@@ -93,18 +93,9 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
         return
     id = event.interaction.custom_id
 
-    if id == "reset":
+    if id == "refresh_code":
         message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
-        new_inst = await Instance.from_original(message, inst.requester)
-        if new_inst is None:
-            await plugin.app.rest.delete_message(
-                inst.channel, event.interaction.message.id
-            )
-            return
-        new_inst.response = inst.response
-        new_inst.action = inst.action
-        inst = new_inst
-        instances[event.interaction.message.id] = inst
+        await inst.update(message)
     elif id == "code_block":
         if v := event.interaction.values:
             for x, block in enumerate(inst.codes):
@@ -198,7 +189,12 @@ class Instance:
 
     def update_code(self, code: models.Code | None) -> None:
         self.code = code
-        if code and code.language and not self.language.overwritten:
+        if (
+            code
+            and code.language
+            and plugin.model.manager.unalias(code.language.lower()) != self.language.v
+            and not self.language.overwritten
+        ):
             self.update_language(code.language, False)
 
     def update_language(self, language: str | None, user: bool) -> None:
@@ -313,7 +309,7 @@ class Instance:
         rows.append(
             plugin.app.rest.build_message_action_row()
             .add_interactive_button(
-                hikari.ButtonStyle.SECONDARY, "reset", label="Reset"
+                hikari.ButtonStyle.SECONDARY, "refresh_code", label="Refresh Code"
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
