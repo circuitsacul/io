@@ -101,11 +101,14 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
             flags=hikari.MessageFlag.EPHEMERAL,
             content="Only the person who created this instance can edit it.",
         )
-        return None
+        return
 
     id = event.interaction.custom_id
 
-    if id == "refresh_code":
+    if id == "delete":
+        await inst.delete()
+        return
+    elif id == "refresh_code":
         message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
         await inst.update(message)
     elif id == "code_block":
