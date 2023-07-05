@@ -7,6 +7,7 @@ from .instance import Instance
 
 plugin = Plugin()
 
+
 @plugin.include
 @crescent.message_command(name="Create Instance")
 async def create_instance(ctx: crescent.Context, msg: hikari.Message) -> None:

@@ -5,9 +5,7 @@ DEFAULTS = {
             "clang-intel": "16.0.0",
             "clang": "16.0.0",
         },
-        "aarch64": {
-            "clang": "16.0.0"
-        }
+        "aarch64": {"clang": "16.0.0"},
     },
     "c++": {
         "amd64": {
@@ -19,8 +17,5 @@ DEFAULTS = {
         },
     },
     "python": "python",
-    "go": {
-        "aarch64": None,
-        "amd64": "none"
-    }
+    "go": {"aarch64": None, "amd64": "none"},
 }

@@ -307,7 +307,7 @@ class Instance:
         instance.update_code(codes[0])
 
         return instance
-    
+
     async def delete(self) -> None:
         if not self.response:
             return

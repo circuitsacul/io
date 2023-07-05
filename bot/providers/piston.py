@@ -50,9 +50,7 @@ class Piston(Provider):
         post_data = {
             "language": lang,
             "version": version,
-            "files": [
-                {"content": transform_code(lang, instance.code.code)}
-            ],
+            "files": [{"content": transform_code(lang, instance.code.code)}],
         }
         async with self.session.post(self.URL + "execute", json=post_data) as resp:
             resp.raise_for_status()
