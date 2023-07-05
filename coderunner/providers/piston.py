@@ -6,6 +6,7 @@ import aiohttp
 
 from coderunner import models
 from coderunner.providers.provider import Provider
+from coderunner.utils.fixes import transform_code
 
 if t.TYPE_CHECKING:
     from coderunner.plugins.instance import Instance
@@ -41,4 +42,21 @@ class Piston(Provider):
         self.runtimes = runtimes
 
     async def execute(self, instance: Instance) -> models.Result:
-        return models.Result(str(instance) + "\n\n" + str(self))
+        assert instance.runtime
+        assert instance.language.v
+        assert instance.code
+
+        lang, version = instance.runtime.id.split("@")
+        post_data = {
+            "language": lang,
+            "version": version,
+            "files": [
+                {"content": transform_code(lang, instance.code.code)}
+            ],
+        }
+        async with self.session.post(self.URL + "execute", json=post_data) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+
+        out = data["run"]["stdout"] + "\n" + data["run"]["stderr"]
+        return models.Result(out)

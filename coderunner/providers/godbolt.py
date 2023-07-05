@@ -83,12 +83,13 @@ class GodBolt(Provider):
         return models.Result(out)
 
     async def _asm(self, instance: Instance) -> models.Result:
-        if not (rt := instance.runtime):
-            return models.Result("No runtime selected.")
-        if not (code := instance.code):
-            return models.Result("No code to run.")
-        if not (lang := instance.language.v):
-            return models.Result("No language.")
+        assert instance.runtime
+        assert instance.language.v
+        assert instance.code
+
+        rt = instance.runtime
+        lang = instance.language.v
+        code = instance.code
 
         url = self.URL + f"compiler/{rt.id}/compile"
         post_data = {
