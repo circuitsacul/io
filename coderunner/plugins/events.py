@@ -15,19 +15,20 @@ async def on_message(event: hikari.MessageCreateEvent) -> None:
         return None
     if not (ct := event.message.content):
         return None
-    if cmd := ct.lstrip("io/"):
-        try:
-            cmd = cmd.split(" ", 1)[0]
-        except KeyError:
+    if not ct.startswith("io/"):
+        return None
+    try:
+        cmd = ct[3:].split(" ", 1)[0]
+    except KeyError:
+        return None
+    match cmd:
+        case "run":
+            action = models.Action.RUN
+        case "asm":
+            action = models.Action.ASM
+        case unknown:
+            await event.message.respond(f"Unknown command {unknown}.", reply=True)
             return None
-        match cmd:
-            case "run":
-                action = models.Action.RUN
-            case "asm":
-                action = models.Action.ASM
-            case unknown:
-                await event.message.respond(f"Unknown command {unknown}.", reply=True)
-                return None
 
     instance = await Instance.from_original(event.message, event.author_id)
     if not instance:
