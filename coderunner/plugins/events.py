@@ -18,7 +18,7 @@ async def on_message(event: hikari.MessageCreateEvent) -> None:
     if not ct.startswith("io/"):
         return None
     try:
-        cmd = ct[3:].split(" ", 1)[0]
+        cmd = ct[3:].splitlines()[0].split(" ", 1)[0]
     except KeyError:
         return None
     match cmd:

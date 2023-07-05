@@ -9,10 +9,10 @@ DEFAULTS = {
             "clang": "16.0.0"
         }
     },
-    "cpp": {
+    "c++": {
         "amd64": {
-            "clang": "16.0.0",
             "clang-intel": "16.0.0",
+            "clang": "16.0.0",
         },
         "aarch64": {
             "clang": "16.0.0",

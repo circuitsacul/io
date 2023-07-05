@@ -370,7 +370,10 @@ class Instance:
                 att = hikari.Bytes(out, "output.ansi")
                 out = None
             else:
-                out = f"```ansi\n{out}\n```"
+                if out in {"", "\n"}:
+                    out = "Your code ran with no output."
+                else:
+                    out = f"```ansi\n{out}\n```"
         else:
             out = "No runtime selected."
 
