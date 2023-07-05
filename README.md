@@ -1,4 +1,4 @@
-# CodeRunner
+# io
 A flexible code-running bot, inspired by [lunarmagpie/io](https://github.com/lunarmagpie/io). Click [here](https://discord.com/api/oauth2/authorize?client_id=1073771658906701954&permissions=346176&scope=bot) to invite the bot.
 
 ## Usage
