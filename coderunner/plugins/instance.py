@@ -78,6 +78,7 @@ async def on_modal(event: hikari.InteractionCreateEvent) -> None:
         event.interaction.token,
         hikari.ResponseType.MESSAGE_UPDATE,
         components=inst.components(),
+        content="Working...",
     )
     await inst.execute()
 
@@ -101,6 +102,7 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
             )
             return
         new_inst.response = inst.response
+        new_inst.action = inst.action
         inst = new_inst
         instances[event.interaction.message.id] = inst
     elif id == "code_block":
@@ -151,6 +153,7 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
         event.interaction,
         event.interaction.token,
         hikari.ResponseType.MESSAGE_UPDATE,
+        content="Working...",
         components=inst.components(),
     )
     await inst.execute()
