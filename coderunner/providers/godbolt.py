@@ -6,6 +6,7 @@ import aiohttp
 
 from coderunner import models
 from coderunner.providers.provider import Provider
+from coderunner.utils.fixes import transform_code
 
 if t.TYPE_CHECKING:
     from coderunner.plugins.instance import Instance
@@ -58,7 +59,7 @@ class GodBolt(Provider):
 
         url = self.URL + f"compiler/{rt.id}/compile"
         post_data = {
-            "source": code.code,
+            "source": transform_code(lang, code.code),
             "lang": lang.lower(),
             "options": {
                 "compilerOptions": {"executorRequest": True},
@@ -91,7 +92,7 @@ class GodBolt(Provider):
 
         url = self.URL + f"compiler/{rt.id}/compile"
         post_data = {
-            "source": code.code,
+            "source": transform_code(lang, code.code),
             "lang": lang.lower(),
             "options": {
                 "compilerOptions": {
