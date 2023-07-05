@@ -402,6 +402,11 @@ class Instance:
         else:
             out = "No runtime selected."
 
+        if out:
+            out = f"<@{self.requester}>\n{out}"
+        else:
+            out = f"<@{self.requester}>"
+
         # send message
         rows = self.components()
         if self.response:
@@ -413,9 +418,9 @@ class Instance:
                 self.channel,
                 out,
                 reply=self.message,
-                mentions_reply=True,
                 components=rows,
                 attachment=att or hikari.UNDEFINED,
+                user_mentions=[self.requester],
             )
             self.response = resp.id
             instances[resp.id] = self
