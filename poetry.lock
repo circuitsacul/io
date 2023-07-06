@@ -322,7 +322,7 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 name = "codespell"
 version = "2.2.5"
 description = "Codespell"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -926,4 +926,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "c1a1fc6e571cf604977ea78248ba616387cef746ac59a6d4bbb8a3a7c3f5220e"
+content-hash = "d555fd83e7e5b87a724b9c68ba7c884fefe52140199a4ef2971630e0e72ec9bd"
