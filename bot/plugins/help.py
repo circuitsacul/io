@@ -11,17 +11,18 @@ HELP_EMBEDS = [
         description=(
             "Hi! My name is io, and my job is to run code."
             "\n I can run any code inside of code blocks:"
-            "\n\\`\\`\\`<language-name>"
+            "\n```"
+            "\n`\u200b`\u200b`\u200b<language-name>"
             "\n<your code here>"
-            "\n\\`\\`\\`"
+            "\n`\u200b`\u200b`\u200b"
+            "\n```"
         ),
         color=EMBED_COLOR,
     ),
     hikari.Embed(
         description=(
-            "\n\\* Running code - Start your message with `io/run`."
-            "\n\\* View Assembly - Start your message with `io/asm`."
-            "\n"
+            "\n- Running code - Start your message with `io/run`."
+            "\n- View Assembly - Start your message with `io/asm`."
             "\nYou can use message commands by right-clicking on a message, "
             "selecting the `Apps` subcategory, then clicking on the `Create Instance` "
             "command."
@@ -33,13 +34,13 @@ HELP_EMBEDS = [
 
 @plugin.include
 @crescent.command
-async def help(ctx: crescent.Context):
+async def help(ctx: crescent.Context) -> None:
     await ctx.respond(embeds=HELP_EMBEDS)
 
 
 @plugin.include
 @crescent.event
-async def on_message(message: hikari.MessageCreateEvent):
+async def on_message(message: hikari.MessageCreateEvent) -> None:
     me = plugin.app.get_me()
 
     if not me:
@@ -50,7 +51,10 @@ async def on_message(message: hikari.MessageCreateEvent):
 
     if not (
         message.content == me.mention
-        or message.content.removeprefix(me.mention).strip() == "help"
+        or (
+            message.content.startswith(me.mention)
+            and message.content.removeprefix(me.mention).strip() == "help"
+        )
     ):
         return
 
