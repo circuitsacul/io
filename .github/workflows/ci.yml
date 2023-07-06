@@ -7,7 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.11"
       - name: Install Poetry
         run: |
           pip install poetry
@@ -16,16 +18,15 @@ jobs:
           poetry install --only=dev
           poetry run nox -s lint
 
-  typing:
-    name: "typing"
+  typecheck:
+    name: "typecheck"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
-          architecture: "x64"
+          python-version: "3.11"
       - name: Install Poetry
         run: |
           pip install poetry
