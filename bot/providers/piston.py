@@ -57,5 +57,8 @@ class Piston(Provider):
             data = await resp.json()
 
         return models.Result(
-            "\n".join([data["compile"]["output"], data["run"]["output"]])
+            "\n".join([
+                data.get("compile", {}).get("output", ""),
+                data.get("run", {}).get("output", ""),
+            ])
         )
