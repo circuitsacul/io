@@ -2,7 +2,12 @@
 strict = true
 
 [tool.ruff]
-extend-select = ["I"]
+extend-select = [
+    # Enable isort
+    "I",
+    # Prevent dangling tasks
+    "RUF006"
+]
 
 [tool.poetry]
 name = "io"
@@ -22,9 +27,15 @@ aiohttp = "^3.8.4"
 dahlia = "^2.3.2"
 
 [tool.poetry.group.dev.dependencies]
+nox = "^2023.4.22"
+
+[tool.poetry.group.typing.dependencies]
+mypy = "^1.1.1"
+
+[tool.poetry.group.linting.dependencies]
 black = "^23.1.0"
 ruff = "^0.0.275"
-mypy = "^1.1.1"
+codespell = "^2.2.5"
 
 [build-system]
 requires = ["poetry-core"]
