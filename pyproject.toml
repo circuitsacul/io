@@ -2,7 +2,12 @@
 strict = true
 
 [tool.ruff]
-extend-select = ["I"]
+extend-select = [
+    # Enable isort
+    "I",
+    # Prevent dangling tasks
+    "RUF006"
+]
 
 [tool.poetry]
 name = "io"
