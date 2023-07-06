@@ -101,11 +101,14 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
             flags=hikari.MessageFlag.EPHEMERAL,
             content="Only the person who created this instance can edit it.",
         )
-        return None
+        return
 
     id = event.interaction.custom_id
 
-    if id == "refresh_code":
+    if id == "delete":
+        await inst.delete()
+        return
+    elif id == "refresh_code":
         message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
         await inst.update(message)
     elif id == "code_block":
@@ -223,8 +226,6 @@ class Instance:
     def update_action(self, action: models.Action) -> None:
         self.action = action
 
-        self.reset_selectors()
-
     def reset_selectors(self) -> None:
         self.instruction_set = None
         self.compiler_type = None
@@ -250,16 +251,18 @@ class Instance:
                 instructions, self.instruction_set, path
             ):
                 instruction_set, compilers = instruction_set_select
-                selectors.append(
-                    ("instruction_set", instruction_set, list(instructions))
-                )
+                if len(instructions) > 1:
+                    selectors.append(
+                        ("instruction_set", instruction_set, list(instructions))
+                    )
                 path.append(instruction_set)
 
                 if compiler_type_select := get_or_first(
                     compilers, self.compiler_type, path
                 ):
                     compiler, versions = compiler_type_select
-                    selectors.append(("compiler_type", compiler, list(compilers)))
+                    if len(compilers) > 1:
+                        selectors.append(("compiler_type", compiler, list(compilers)))
                     path.append(compiler)
 
                     if version_select := get_or_first(versions, self.version, path):
@@ -284,12 +287,15 @@ class Instance:
 
         if not (tree3 := get_or_first(tree2, self.instruction_set, path)):
             return None
+        self.instruction_set = tree3[0]
         path.append(tree3[0])
         if not (tree4 := get_or_first(tree3[1], self.compiler_type, path)):
             return None
+        self.compiler_type = tree4[0]
         path.append(tree4[0])
         tree5 = get_or_first(tree4[1], self.version, path)
         if tree5:
+            self.version = tree5[0]
             return tree5[1]
         else:
             return None
@@ -368,10 +374,11 @@ class Instance:
 
         # version
         for id, selected, options in self.selectors():
-            if len(options) == 1:
-                continue
-
-            select = plugin.app.rest.build_message_action_row().add_text_menu(id)
+            select = (
+                plugin.app.rest.build_message_action_row()
+                .add_text_menu(id)
+                .set_is_disabled(len(options) == 1)
+            )
             for option in options[0:25]:
                 select.add_option(
                     str(option), str(option), is_default=option == selected
@@ -402,6 +409,11 @@ class Instance:
         else:
             out = "No runtime selected."
 
+        if out:
+            out = f"<@{self.requester}>\n{out}"
+        else:
+            out = f"<@{self.requester}>"
+
         # send message
         rows = self.components()
         if self.response:
@@ -413,9 +425,9 @@ class Instance:
                 self.channel,
                 out,
                 reply=self.message,
-                mentions_reply=True,
                 components=rows,
                 attachment=att or hikari.UNDEFINED,
+                user_mentions=[self.requester],
             )
             self.response = resp.id
             instances[resp.id] = self
