@@ -46,7 +46,7 @@ async def on_message(message: hikari.MessageCreateEvent) -> None:
     if not me:
         return
 
-    if message.author_id == me.id:
+    if not message.is_human:
         return
 
     if not message.content:
