@@ -26,8 +26,7 @@ async def on_message(event: hikari.MessageCreateEvent) -> None:
             action = models.Action.RUN
         case "asm":
             action = models.Action.ASM
-        case unknown:
-            await event.message.respond(f"Unknown command {unknown}.", reply=True)
+        case _:
             return None
 
     instance = await Instance.from_original(event.message, event.author_id)
