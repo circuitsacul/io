@@ -49,14 +49,16 @@ async def on_message(message: hikari.MessageCreateEvent) -> None:
     if message.author_id == me.id:
         return
 
+    if not message.content:
+        return
+
     if not (
         message.content == me.mention
         or (
-            message.content
-            and message.content.startswith(me.mention)
+            message.content.startswith(me.mention)
             and message.content.removeprefix(me.mention).strip() == "help"
         )
     ):
         return
 
-    await message.message.respond(embeds=HELP_EMBEDS)
+    await message.message.respond(embeds=HELP_EMBEDS, reply=True)
