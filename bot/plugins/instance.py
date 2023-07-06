@@ -226,8 +226,6 @@ class Instance:
     def update_action(self, action: models.Action) -> None:
         self.action = action
 
-        self.reset_selectors()
-
     def reset_selectors(self) -> None:
         self.instruction_set = None
         self.compiler_type = None
