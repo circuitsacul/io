@@ -56,5 +56,6 @@ class Piston(Provider):
             resp.raise_for_status()
             data = await resp.json()
 
-        out = data["run"]["stdout"] + "\n" + data["run"]["stderr"]
-        return models.Result(out)
+        return models.Result(
+            "\n".join([data["compile"]["output"], data["run"]["output"]])
+        )

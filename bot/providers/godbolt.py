@@ -12,6 +12,36 @@ if t.TYPE_CHECKING:
     from bot.plugins.instance import Instance
 
 
+def parse_response(data: dict[str, t.Any]) -> str:
+    berr = get_text(data, "buildResult", "stderr")
+    bout = get_text(data, "buildResult", "stdout")
+    err = get_text(data, "stderr")
+    out = get_text(data, "stdout")
+    asm = get_text(data, "asm")
+
+    if berr == err:
+        berr = None
+    if bout == out:
+        bout = None
+
+    return join_text(berr, bout, err, out, asm)
+
+
+def join_text(*texts: str | None) -> str:
+    return "\n".join(t for t in texts if t)
+
+
+def get_text(obj: object, *path: str) -> str | None:
+    for k in path:
+        assert isinstance(obj, dict)
+        try:
+            obj = obj[k]
+        except (KeyError, TypeError):
+            return None
+    assert isinstance(obj, list)
+    return "\n".join(line["text"] for line in obj)
+
+
 class GodBolt(Provider):
     URL = "https://godbolt.org/api/"
 
@@ -71,16 +101,7 @@ class GodBolt(Provider):
             resp.raise_for_status()
             data = await resp.json()
 
-        if data["code"] == -1:
-            out = "\n".join(dct["text"] for dct in data["buildResult"]["stderr"])
-        else:
-            out = (
-                "\n".join(dct["text"] for dct in data["stdout"])
-                + "\n"
-                + "\n".join(dct["text"] for dct in data["stderr"])
-            )
-
-        return models.Result(out)
+        return models.Result(parse_response(data))
 
     async def _asm(self, instance: Instance) -> models.Result:
         assert instance.runtime
@@ -118,12 +139,7 @@ class GodBolt(Provider):
             resp.raise_for_status()
             data = await resp.json()
 
-        out = (
-            "\n".join(dct["text"] for dct in data["asm"])
-            + "\n"
-            + "\n".join(dct["text"] for dct in data["stderr"])
-        )
-        return models.Result(out)
+        return models.Result(parse_response(data))
 
     async def execute(self, instance: Instance) -> models.Result:
         match instance.action:
