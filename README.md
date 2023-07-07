@@ -4,5 +4,13 @@ A flexible code-running bot, inspired by [lunarmagpie/io](https://github.com/lun
 ## Usage
 Use `io/run` or `io/asm` in the message to execute or compile code blocks. You can also use the menu command (right-click > apps > create instance) to create an instance from any message.
 
+## Hosting
+Copy `.env.example` to a new file called `.env`. Fill out the environment variables.
+The bot can then be run with these commands:
+```sh
+poetry install
+poetry run python -m bot
+```
+
 ## Credits
 Most of the credit goes to [lunarmagpie/io](https://github.com/lunarmagpie/io), as this bot was inspired and heavily based on it.

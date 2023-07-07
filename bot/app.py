@@ -1,10 +1,8 @@
-import os
-
 import crescent
-import dotenv
 import hikari
 
 from bot.manager import Manager
+from bot.config import CONFIG
 
 Plugin = crescent.Plugin[hikari.GatewayBot, "Model"]
 INTENTS = hikari.Intents.ALL_UNPRIVILEGED | hikari.Intents.MESSAGE_CONTENT
@@ -22,14 +20,7 @@ class Model:
 
 
 def main() -> None:
-    dotenv.load_dotenv()
-
-    token = os.getenv("TOKEN")
-    if not token:
-        print("No token.")
-        return
-
-    app = hikari.GatewayBot(token, intents=INTENTS)
+    app = hikari.GatewayBot(CONFIG.TOKEN, intents=INTENTS)
     client = crescent.Client(app, model := Model())
 
     @app.listen(hikari.StartingEvent)
