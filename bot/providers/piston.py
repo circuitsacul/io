@@ -5,6 +5,7 @@ import typing as t
 import aiohttp
 
 from bot import models
+from bot.config import CONFIG
 from bot.providers.provider import Provider
 from bot.utils.fixes import transform_code
 
@@ -13,7 +14,7 @@ if t.TYPE_CHECKING:
 
 
 class Piston(Provider):
-    URL = "https://emkc.org/api/v2/piston/"
+    URL = CONFIG.PISTON_URL
 
     async def startup(self) -> None:
         self._session = aiohttp.ClientSession(

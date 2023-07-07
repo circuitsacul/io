@@ -5,6 +5,7 @@ import typing as t
 import aiohttp
 
 from bot import models
+from bot.config import CONFIG
 from bot.providers.provider import Provider
 from bot.utils.fixes import transform_code
 
@@ -43,7 +44,7 @@ def get_text(obj: object, *path: str) -> str | None:
 
 
 class GodBolt(Provider):
-    URL = "https://godbolt.org/api/"
+    URL = CONFIG.GODBOLT_URL
 
     async def startup(self) -> None:
         self._session = aiohttp.ClientSession(headers={"Accept": "application/json"})

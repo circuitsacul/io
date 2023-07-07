@@ -1,9 +1,7 @@
-import os
-
 import crescent
-import dotenv
 import hikari
 
+from bot.config import CONFIG
 from bot.manager import Manager
 
 Plugin = crescent.Plugin[hikari.GatewayBot, "Model"]
@@ -22,14 +20,7 @@ class Model:
 
 
 def main() -> None:
-    dotenv.load_dotenv()
-
-    token = os.getenv("TOKEN")
-    if not token:
-        print("No token.")
-        return
-
-    app = hikari.GatewayBot(token, intents=INTENTS)
+    app = hikari.GatewayBot(CONFIG.TOKEN, intents=INTENTS)
     client = crescent.Client(app, model := Model())
 
     @app.listen(hikari.StartingEvent)
