@@ -23,13 +23,8 @@ def main() -> None:
     app = hikari.GatewayBot(CONFIG.TOKEN, intents=INTENTS)
     client = crescent.Client(app, model := Model())
 
-    @app.listen(hikari.StartingEvent)
-    async def _(_: hikari.StartingEvent) -> None:
-        await model.startup()
-
-    @app.listen(hikari.StoppingEvent)
-    async def _(_: hikari.StoppingEvent) -> None:
-        await model.shutdown()
+    app.subscribe(hikari.StartingEvent, lambda _: model.startup())
+    app.subscribe(hikari.StoppingEvent, lambda _: model.shutdown())
 
     client.plugins.load_folder("bot.plugins")
     app.run()
