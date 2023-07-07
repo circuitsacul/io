@@ -1,6 +1,7 @@
 import crescent
-from bot.app import Plugin
 import hikari
+
+from bot.app import Plugin
 from bot.constants import EMBED_COLOR
 
 plugin = Plugin()
