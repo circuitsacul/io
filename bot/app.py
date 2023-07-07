@@ -1,8 +1,8 @@
 import crescent
 import hikari
 
-from bot.manager import Manager
 from bot.config import CONFIG
+from bot.manager import Manager
 
 Plugin = crescent.Plugin[hikari.GatewayBot, "Model"]
 INTENTS = hikari.Intents.ALL_UNPRIVILEGED | hikari.Intents.MESSAGE_CONTENT

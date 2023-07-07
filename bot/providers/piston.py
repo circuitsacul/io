@@ -5,9 +5,9 @@ import typing as t
 import aiohttp
 
 from bot import models
+from bot.config import CONFIG
 from bot.providers.provider import Provider
 from bot.utils.fixes import transform_code
-from bot.config import CONFIG
 
 if t.TYPE_CHECKING:
     from bot.plugins.instance import Instance

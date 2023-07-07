@@ -1,6 +1,7 @@
-import dotenv
 import dataclasses
 import typing
+
+import dotenv
 
 
 @dataclasses.dataclass
