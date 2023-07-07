@@ -4,7 +4,6 @@ import asyncio
 import typing as t
 
 from bot import models
-from bot.aliases import ALIASES
 from bot.providers.godbolt import GodBolt
 from bot.providers.piston import Piston
 from bot.providers.provider import Provider
@@ -15,7 +14,8 @@ if t.TYPE_CHECKING:
 
 class Manager:
     def __init__(self, model: Model) -> None:
-        self.providers: list[Provider] = [GodBolt(model), Piston(model)]
+        self.piston_provider = Piston(model)
+        self.providers: list[Provider] = [GodBolt(model), self.piston_provider]
         self.runtimes = models.RuntimeTree()
         self.model = model
 
@@ -44,4 +44,4 @@ class Manager:
         if language in self.runtimes.run or language in self.runtimes.asm:
             return language
 
-        return ALIASES.get(language)
+        return self.piston_provider.aliases.get(language)

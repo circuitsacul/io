@@ -10,11 +10,16 @@ from bot.providers.provider import Provider
 from bot.utils.fixes import transform_code
 
 if t.TYPE_CHECKING:
+    from bot.app import Model
     from bot.plugins.instance import Instance
 
 
 class Piston(Provider):
     URL = CONFIG.PISTON_URL
+
+    def __init__(self, model: Model) -> None:
+        self.aliases: dict[str, str] = {}
+        super().__init__(model)
 
     async def startup(self) -> None:
         self._session = aiohttp.ClientSession(
@@ -23,6 +28,7 @@ class Piston(Provider):
 
     async def update_data(self) -> None:
         runtimes = models.RuntimeTree()
+        aliases: dict[str, str] = {}
 
         async with self.session.get(self.URL + "runtimes/") as resp:
             resp.raise_for_status()
@@ -38,8 +44,12 @@ class Piston(Provider):
                     provider=self,
                 )
 
+                for alias in data["aliases"]:
+                    aliases[alias] = runtime.name
+
                 runtimes.run[data["language"]]["piston"]["piston"][version] = runtime
 
+        self.aliases = aliases
         self.runtimes = runtimes
 
     async def execute(self, instance: Instance) -> models.Result:
