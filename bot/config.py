@@ -1,6 +1,5 @@
 import dataclasses
-import typing
-
+import typing as t
 import dotenv
 
 
@@ -11,5 +10,5 @@ class Config:
     GODBOLT_URL: str
 
 
-env_vars: typing.Any = dotenv.dotenv_values()
+env_vars: dict[str, str] = t.cast(dict[str, str], dotenv.dotenv_values())
 CONFIG = Config(**env_vars)
