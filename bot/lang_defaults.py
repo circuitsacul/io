@@ -1,5 +1,8 @@
 DEFAULTS = {
+    "python": "piston",
     "rust": {"amd64": "rust"},
+    "go": {"amd64": "none"},
+    "typescript": "piston",
     "c": {
         "amd64": {
             "clang-intel": "16.0.0",
@@ -16,6 +19,4 @@ DEFAULTS = {
             "clang": "16.0.0",
         },
     },
-    "python": "python",
-    "go": {"aarch64": None, "amd64": "none"},
 }
