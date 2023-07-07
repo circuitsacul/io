@@ -64,7 +64,7 @@ async def on_modal(event: hikari.InteractionCreateEvent) -> None:
         return
 
     lang: str | None = event.interaction.components[0].components[0].value
-    if lang == "default":
+    if not lang:
         if inst.code:
             lang = inst.code.language
         else:
@@ -127,7 +127,10 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
             title="Select Language",
             custom_id="language",
             component=event.app.rest.build_modal_action_row().add_text_input(
-                "language", "Language", placeholder='Use "default" to use the default.'
+                "language",
+                "Language",
+                placeholder="Leave empty to use the default.",
+                required=False,
             ),
         )
         return
