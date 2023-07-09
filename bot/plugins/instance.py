@@ -431,7 +431,7 @@ class Instance:
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
                 ComponentID.STDIN,
-                label="STDIN",
+                label="Set STDIN",
             )
         )
 
@@ -479,12 +479,18 @@ class Instance:
                 att = hikari.Bytes(out, "output.ansi")
                 out = None
             else:
-                if out in {"", "\n"}:
+                if out in {"", "\n", None}:
                     out = "Your code ran with no output."
                 else:
-                    out = f"```ansi\n{out}\n```"
+                    out = f"```ansi\n{out}```"
         else:
             out = "No runtime selected."
+
+        if self.stdin:
+            in_lines = "\n".join(
+                f"\x1b[1;33mIN:\x1b[1;0m {line}" for line in self.stdin.splitlines()
+            )
+            out = f"{out}\n```ansi\n{in_lines}```"
 
         if out:
             out = f"<@{self.requester}>\n{out}"
