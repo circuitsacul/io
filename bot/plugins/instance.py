@@ -487,9 +487,7 @@ class Instance:
             out = "No runtime selected."
 
         if self.stdin:
-            in_lines = "\n".join(
-                f"\x1b[1;33mIN:\x1b[1;0m {line}" for line in self.stdin.splitlines()
-            )
+            in_lines = '\n'.join(f"\x1b[1;33mIN:\x1b[0m {line}" for line in self.stdin.splitlines())
             out = f"{out}\n```ansi\n{in_lines}```"
 
         if out:
