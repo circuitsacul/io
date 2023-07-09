@@ -94,6 +94,7 @@ class GodBolt(Provider):
             "lang": lang.lower(),
             "options": {
                 "compilerOptions": {"executorRequest": True},
+                "executeParameters": {"stdin": instance.stdin},
                 "filters": {"execute": True},
             },
         }
