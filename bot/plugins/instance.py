@@ -471,35 +471,49 @@ class Instance:
         # try to execute code
         code_attr: hikari.Bytes | None = None
         stdin_attr: hikari.Bytes | None = None
-        out: str | None
+        out: list[str] = [f"<@{self.requester}>"]
+
+        code_output_in_file = False
+        stdin_in_file = False
+
+        code_output: str = ""
         if self.runtime:
             ret = await self.runtime.provider.execute(self)
-            out = ret.format()
+            code_output = ret.format()
 
-            if len(out) + len(self.stdin or "") > 1_950:
-                code_attr = hikari.Bytes(out, "output.ansi")
-                out = None
-            else:
-                if out in {"", "\n", None}:
-                    out = "Your code ran with no output."
-                else:
-                    out = f"```ansi\n{out}```"
+            if not code_output.strip():
+                out += ["Your code ran with no output."]
+                code_output = ""
         else:
-            out = "No runtime selected."
+            out += ["No runtime selected."]
 
-        if self.stdin:
-            if len(self.stdin) < 1_950:
-                in_lines = "\n".join(
-                    f"\x1b[1;33mIN:\x1b[0m {line}" for line in self.stdin.splitlines()
+        stdin: str = self.stdin or ""
+
+        if len(code_output) + len(stdin) > 1_950:
+            if len(code_output) < 1_950:
+                stdin_in_file = True
+            elif len(stdin) < 1_950:
+                code_output_in_file = True
+            else:
+                stdin_in_file = True
+                code_output_in_file = True
+
+        if code_output:
+            if code_output_in_file:
+                code_attr = hikari.Bytes(code_output, "code.ansi")
+            else:
+                out += [f"```ansi\n{code_output}```"]
+
+        if stdin:
+            if stdin_in_file:
+                stdin_attr = hikari.Bytes(stdin, "stdin.txt")
+            else:
+                stdin = "\n".join(
+                    f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
                 )
-                out = f"{out}\n```ansi\n{in_lines}```"
-            else:
-                stdin_attr = hikari.Bytes(self.stdin, "stdin.txt")
+                out += [f"```ansi\n{stdin}```"]
 
-        if out:
-            out = f"<@{self.requester}>\n{out}"
-        else:
-            out = f"<@{self.requester}>"
+        out_str = "\n".join(out)
 
         # send message
         rows = self.components()
@@ -508,14 +522,14 @@ class Instance:
             await plugin.app.rest.edit_message(
                 self.channel,
                 self.response,
-                out,
+                out_str,
                 components=rows,
                 attachments=attachments,
             )
         else:
             resp = await plugin.app.rest.create_message(
                 self.channel,
-                out,
+                out_str,
                 reply=self.message,
                 components=rows,
                 attachments=attachments,
