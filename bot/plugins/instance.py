@@ -130,73 +130,74 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
 
     id = event.interaction.custom_id
 
-    if id == ComponentID.DELETE:
-        await inst.delete()
-        return
-    elif id == ComponentID.REFRESH_CODE:
-        message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
-        await inst.update(message)
-    elif id == ComponentID.CODE_BLOCK:
-        if v := event.interaction.values:
-            for x, block in enumerate(inst.codes):
-                if str(x) == v[0]:
-                    inst.update_code(block)
-                    break
-        else:
-            if inst.codes:
-                inst.update_code(inst.codes[0])
-    elif id == ComponentID.LANGUAGE:
-        await event.app.rest.create_modal_response(
-            event.interaction,
-            event.interaction.token,
-            title="Select Language",
-            custom_id=ModalID.LANGUAGE,
-            component=event.app.rest.build_modal_action_row().add_text_input(
-                ModalID.LANGUAGE,
-                "Language",
-                placeholder="Leave empty to use the default.",
-                required=False,
-            ),
-        )
-        return
-    elif id == ComponentID.TOGGLE_MODE:
-        if inst.action is models.Action.RUN:
-            inst.update_action(models.Action.ASM)
-        else:
-            inst.update_action(models.Action.RUN)
-    elif id == ComponentID.INSTRUCTION_SET:
-        if v := event.interaction.values:
-            inst.instruction_set = v[0]
-        else:
-            inst.instruction_set = None
-        inst.compiler_type = None
-        inst.version = None
-    elif id == ComponentID.COMPILER_TYPE:
-        if v := event.interaction.values:
-            inst.compiler_type = v[0]
-        else:
+    match id:
+        case ComponentID.DELETE:
+            await inst.delete()
+            return
+        case ComponentID.REFRESH_CODE:
+            message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
+            await inst.update(message)
+        case ComponentID.CODE_BLOCK:
+            if v := event.interaction.values:
+                for x, block in enumerate(inst.codes):
+                    if str(x) == v[0]:
+                        inst.update_code(block)
+                        break
+            else:
+                if inst.codes:
+                    inst.update_code(inst.codes[0])
+        case ComponentID.LANGUAGE:
+            await event.app.rest.create_modal_response(
+                event.interaction,
+                event.interaction.token,
+                title="Select Language",
+                custom_id=ModalID.LANGUAGE,
+                component=event.app.rest.build_modal_action_row().add_text_input(
+                    ModalID.LANGUAGE,
+                    "Language",
+                    placeholder="Leave empty to use the default.",
+                    required=False,
+                ),
+            )
+            return
+        case ComponentID.TOGGLE_MODE:
+            if inst.action is models.Action.RUN:
+                inst.update_action(models.Action.ASM)
+            else:
+                inst.update_action(models.Action.RUN)
+        case ComponentID.INSTRUCTION_SET:
+            if v := event.interaction.values:
+                inst.instruction_set = v[0]
+            else:
+                inst.instruction_set = None
             inst.compiler_type = None
-        inst.version = None
-    elif id == ComponentID.VERSION:
-        if v := event.interaction.values:
-            inst.version = v[0]
-        else:
             inst.version = None
-    elif id == ComponentID.STDIN:
-        await event.app.rest.create_modal_response(
-            event.interaction,
-            event.interaction.token,
-            title="Set Stdin",
-            custom_id=ModalID.STDIN,
-            component=event.app.rest.build_modal_action_row().add_text_input(
-                ModalID.STDIN,
-                "Set Stdin",
-                value=inst.stdin or hikari.UNDEFINED,
-                required=False,
-                style=hikari.TextInputStyle.PARAGRAPH,
-            ),
-        )
-        return
+        case ComponentID.COMPILER_TYPE:
+            if v := event.interaction.values:
+                inst.compiler_type = v[0]
+            else:
+                inst.compiler_type = None
+            inst.version = None
+        case ComponentID.VERSION:
+            if v := event.interaction.values:
+                inst.version = v[0]
+            else:
+                inst.version = None
+        case ComponentID.STDIN:
+            await event.app.rest.create_modal_response(
+                event.interaction,
+                event.interaction.token,
+                title="Set Stdin",
+                custom_id=ModalID.STDIN,
+                component=event.app.rest.build_modal_action_row().add_text_input(
+                    ModalID.STDIN,
+                    "Set Stdin",
+                    value=inst.stdin or hikari.UNDEFINED,
+                    required=False,
+                    style=hikari.TextInputStyle.PARAGRAPH,
+                ),
+            )
+            return
 
     await event.app.rest.create_interaction_response(
         event.interaction,
