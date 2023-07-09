@@ -187,11 +187,11 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
             await event.app.rest.create_modal_response(
                 event.interaction,
                 event.interaction.token,
-                title="Set Stdin",
+                title="Set STDIN",
                 custom_id=ModalID.STDIN,
                 component=event.app.rest.build_modal_action_row().add_text_input(
                     ModalID.STDIN,
-                    "Set Stdin",
+                    "Set STDIN",
                     value=inst.stdin or hikari.UNDEFINED,
                     required=False,
                     style=hikari.TextInputStyle.PARAGRAPH,
@@ -431,7 +431,7 @@ class Instance:
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
                 ComponentID.STDIN,
-                label="stdin",
+                label="STDIN",
             )
         )
 
