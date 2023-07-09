@@ -469,14 +469,15 @@ class Instance:
             await plugin.app.rest.trigger_typing(self.channel)
 
         # try to execute code
-        att: hikari.Bytes | None = None
+        code_attr: hikari.Bytes | None = None
+        stdin_attr: hikari.Bytes | None = None
         out: str | None
         if self.runtime:
             ret = await self.runtime.provider.execute(self)
             out = ret.format()
 
-            if len(out) > 1_950:
-                att = hikari.Bytes(out, "output.ansi")
+            if len(out) + len(self.stdin or "") > 1_950:
+                code_attr = hikari.Bytes(out, "output.ansi")
                 out = None
             else:
                 if out in {"", "\n", None}:
@@ -487,8 +488,13 @@ class Instance:
             out = "No runtime selected."
 
         if self.stdin:
-            in_lines = '\n'.join(f"\x1b[1;33mIN:\x1b[0m {line}" for line in self.stdin.splitlines())
-            out = f"{out}\n```ansi\n{in_lines}```"
+            if len(self.stdin) < 1_950:
+                in_lines = "\n".join(
+                    f"\x1b[1;33mIN:\x1b[0m {line}" for line in self.stdin.splitlines()
+                )
+                out = f"{out}\n```ansi\n{in_lines}```"
+            else:
+                stdin_attr = hikari.Bytes(self.stdin, "stdin.txt")
 
         if out:
             out = f"<@{self.requester}>\n{out}"
@@ -497,9 +503,14 @@ class Instance:
 
         # send message
         rows = self.components()
+        attachments = list(filter(None, [code_attr, stdin_attr]))
         if self.response:
             await plugin.app.rest.edit_message(
-                self.channel, self.response, out, components=rows, attachment=att
+                self.channel,
+                self.response,
+                out,
+                components=rows,
+                attachments=attachments,
             )
         else:
             resp = await plugin.app.rest.create_message(
@@ -507,7 +518,7 @@ class Instance:
                 out,
                 reply=self.message,
                 components=rows,
-                attachment=att or hikari.UNDEFINED,
+                attachments=attachments,
                 user_mentions=[self.requester],
             )
             self.response = resp.id
