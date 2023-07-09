@@ -513,9 +513,8 @@ class Instance:
                 )
                 out += [f"```ansi\n{stdin}```"]
 
-        out_str = "\n".join(out)
-
         # send message
+        out_str = "\n".join(out)
         rows = self.components()
         attachments = list(filter(None, [code_attr, stdin_attr]))
         if self.response:
