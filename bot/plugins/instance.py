@@ -492,7 +492,6 @@ class Instance:
             f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
         )
 
-
         if len(code_output) + len(formatted_stdin) > 1_950:
             if len(code_output) < 1_950:
                 stdin_in_file = True
