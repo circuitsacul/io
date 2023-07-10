@@ -482,7 +482,7 @@ class Instance:
             code_output = ret.format()
 
             if not code_output.strip():
-                out += ["Your code ran with no output."]
+                out.append("Your code ran with no output.")
                 code_output = ""
         else:
             out += ["No runtime selected."]
