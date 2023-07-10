@@ -485,7 +485,7 @@ class Instance:
                 out.append("Your code ran with no output.")
                 code_output = ""
         else:
-            out += ["No runtime selected."]
+            out.append("No runtime selected.")
 
         stdin: str = self.stdin or ""
 
