@@ -20,7 +20,7 @@ class Model:
 
 
 def main() -> None:
-    app = hikari.GatewayBot(CONFIG.TOKEN, intents=INTENTS, banner="crescent")
+    app = hikari.GatewayBot(CONFIG.TOKEN, intents=INTENTS)
     client = crescent.Client(app, model := Model())
 
     @app.listen(hikari.StartingEvent)
