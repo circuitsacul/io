@@ -62,7 +62,9 @@ class Piston(Provider):
             "language": lang,
             "version": version,
             "files": [{"content": transform_code(lang, instance.code.code)}],
+            "stdin": instance.stdin,
         }
+
         async with self.session.post(self.URL + "execute", json=post_data) as resp:
             resp.raise_for_status()
             data = await resp.json()

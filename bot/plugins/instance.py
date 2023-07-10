@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import enum
 import typing as t
 from dataclasses import dataclass, field
 
@@ -18,6 +19,23 @@ instances: dict[hikari.Snowflake, Instance] = {}
 
 K = t.TypeVar("K")
 V = t.TypeVar("V")
+
+
+class ComponentID(enum.StrEnum):
+    DELETE = "delete"
+    REFRESH_CODE = "refresh_code"
+    CODE_BLOCK = "code_block"
+    LANGUAGE = "language"
+    TOGGLE_MODE = "toggle_mode"
+    INSTRUCTION_SET = "instruction_set"
+    COMPILER_TYPE = "compiler_type"
+    VERSION = "version"
+    STDIN = "stdin"
+
+
+class ModalID(enum.StrEnum):
+    LANGUAGE = "language"
+    STDIN = "stdin"
 
 
 def next_in_default_chain(path: list[str | None]) -> str | None:
@@ -54,24 +72,31 @@ def get_or_first(
 
 @plugin.include
 @crescent.event
-async def on_modal(event: hikari.InteractionCreateEvent) -> None:
+async def on_modal_interaction(event: hikari.InteractionCreateEvent) -> None:
     if not isinstance(event.interaction, hikari.ModalInteraction):
         return
 
     if not (message := event.interaction.message):
         return
+
     if not (inst := instances.get(message.id)):
         return
 
-    lang: str | None = event.interaction.components[0].components[0].value
-    if not lang:
-        if inst.code:
-            lang = inst.code.language
-        else:
-            lang = None
-        inst.update_language(lang, False)
-    else:
-        inst.update_language(lang, True)
+    id = event.interaction.custom_id
+
+    match id:
+        case ModalID.LANGUAGE:
+            lang: str | None = event.interaction.components[0].components[0].value
+            if not lang:
+                if inst.code:
+                    lang = inst.code.language
+                else:
+                    lang = None
+                inst.update_language(lang, False)
+            else:
+                inst.update_language(lang, True)
+        case ModalID.STDIN:
+            inst.stdin = event.interaction.components[0].components[0].value
 
     await event.app.rest.create_interaction_response(
         event.interaction,
@@ -86,7 +111,7 @@ async def on_modal(event: hikari.InteractionCreateEvent) -> None:
 
 @plugin.include
 @crescent.event
-async def on_button(event: hikari.InteractionCreateEvent) -> None:
+async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None:
     if not isinstance(event.interaction, hikari.ComponentInteraction):
         return
 
@@ -105,58 +130,74 @@ async def on_button(event: hikari.InteractionCreateEvent) -> None:
 
     id = event.interaction.custom_id
 
-    if id == "delete":
-        await inst.delete()
-        return
-    elif id == "refresh_code":
-        message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
-        await inst.update(message)
-    elif id == "code_block":
-        if v := event.interaction.values:
-            for x, block in enumerate(inst.codes):
-                if str(x) == v[0]:
-                    inst.update_code(block)
-                    break
-        else:
-            if inst.codes:
-                inst.update_code(inst.codes[0])
-    elif id == "language":
-        await event.app.rest.create_modal_response(
-            event.interaction,
-            event.interaction.token,
-            title="Select Language",
-            custom_id="language",
-            component=event.app.rest.build_modal_action_row().add_text_input(
-                "language",
-                "Language",
-                placeholder="Leave empty to use the default.",
-                required=False,
-            ),
-        )
-        return
-    elif id == "toggle_mode":
-        if inst.action is models.Action.RUN:
-            inst.update_action(models.Action.ASM)
-        else:
-            inst.update_action(models.Action.RUN)
-    elif id == "instruction_set":
-        if v := event.interaction.values:
-            inst.instruction_set = v[0]
-        else:
-            inst.instruction_set = None
-        inst.compiler_type = None
-        inst.version = None
-    elif id == "compiler_type":
-        if v := event.interaction.values:
-            inst.compiler_type = v[0]
-        else:
+    match id:
+        case ComponentID.DELETE:
+            await inst.delete()
+            return
+        case ComponentID.REFRESH_CODE:
+            message = await plugin.app.rest.fetch_message(inst.channel, inst.message)
+            await inst.update(message)
+        case ComponentID.CODE_BLOCK:
+            if v := event.interaction.values:
+                for x, block in enumerate(inst.codes):
+                    if str(x) == v[0]:
+                        inst.update_code(block)
+                        break
+            else:
+                if inst.codes:
+                    inst.update_code(inst.codes[0])
+        case ComponentID.LANGUAGE:
+            await event.app.rest.create_modal_response(
+                event.interaction,
+                event.interaction.token,
+                title="Select Language",
+                custom_id=ModalID.LANGUAGE,
+                component=event.app.rest.build_modal_action_row().add_text_input(
+                    ModalID.LANGUAGE,
+                    "Language",
+                    placeholder="Leave empty to use the default.",
+                    required=False,
+                ),
+            )
+            return
+        case ComponentID.TOGGLE_MODE:
+            if inst.action is models.Action.RUN:
+                inst.update_action(models.Action.ASM)
+            else:
+                inst.update_action(models.Action.RUN)
+        case ComponentID.INSTRUCTION_SET:
+            if v := event.interaction.values:
+                inst.instruction_set = v[0]
+            else:
+                inst.instruction_set = None
             inst.compiler_type = None
-        inst.version = None
-    elif id == "version":
-        if v := event.interaction.values:
-            inst.version = v[0]
-        else:
             inst.version = None
+        case ComponentID.COMPILER_TYPE:
+            if v := event.interaction.values:
+                inst.compiler_type = v[0]
+            else:
+                inst.compiler_type = None
+            inst.version = None
+        case ComponentID.VERSION:
+            if v := event.interaction.values:
+                inst.version = v[0]
+            else:
+                inst.version = None
+        case ComponentID.STDIN:
+            await event.app.rest.create_modal_response(
+                event.interaction,
+                event.interaction.token,
+                title="Set STDIN",
+                custom_id=ModalID.STDIN,
+                component=event.app.rest.build_modal_action_row().add_text_input(
+                    ModalID.STDIN,
+                    "Set STDIN",
+                    value=inst.stdin or hikari.UNDEFINED,
+                    required=False,
+                    style=hikari.TextInputStyle.PARAGRAPH,
+                ),
+            )
+            return
 
     await event.app.rest.create_interaction_response(
         event.interaction,
@@ -190,6 +231,15 @@ class Setting(t.Generic[T]):
         return field(default_factory=lambda: cls(v))
 
 
+class Selector(t.NamedTuple):
+    id: ComponentID
+    """The custom ID for the component used to select this."""
+    selected: str | None
+    """The currently selected runtime."""
+    options: list[str | None]
+    """A list of all runtimes the user can select."""
+
+
 @dataclass
 class Instance:
     channel: hikari.Snowflake
@@ -198,6 +248,7 @@ class Instance:
     codes: list[models.Code]
 
     code: t.Optional[models.Code] = None
+    stdin: str | None = None
     language: Setting[t.Optional[str]] = Setting.make(None)
     action: models.Action = models.Action.RUN
     instruction_set: str | None = None
@@ -234,11 +285,11 @@ class Instance:
         self.compiler_type = None
         self.version = None
 
-    def selectors(self) -> list[tuple[str, str | None, list[str | None]]]:
+    def selectors(self) -> list[Selector]:
         if self.language.v is None:
             return []
 
-        selectors: list[tuple[str, str | None, list[str | None]]] = []
+        selectors: list[Selector] = []
 
         runtimes = plugin.model.manager.runtimes
         match self.action:
@@ -256,7 +307,11 @@ class Instance:
                 instruction_set, compilers = instruction_set_select
                 if len(instructions) > 1:
                     selectors.append(
-                        ("instruction_set", instruction_set, list(instructions))
+                        Selector(
+                            id=ComponentID.INSTRUCTION_SET,
+                            selected=instruction_set,
+                            options=list(instructions),
+                        )
                     )
                 path.append(instruction_set)
 
@@ -265,12 +320,24 @@ class Instance:
                 ):
                     compiler, versions = compiler_type_select
                     if len(compilers) > 1:
-                        selectors.append(("compiler_type", compiler, list(compilers)))
+                        selectors.append(
+                            Selector(
+                                id=ComponentID.COMPILER_TYPE,
+                                selected=compiler,
+                                options=list(compilers),
+                            )
+                        )
                     path.append(compiler)
 
                     if version_select := get_or_first(versions, self.version, path):
                         version, _ = version_select
-                        selectors.append(("version", version, list(versions)))
+                        selectors.append(
+                            Selector(
+                                id=ComponentID.VERSION,
+                                selected=version,
+                                options=list(versions),
+                            )
+                        )
 
         return selectors
 
@@ -342,29 +409,36 @@ class Instance:
         rows.append(
             plugin.app.rest.build_message_action_row()
             .add_interactive_button(
-                hikari.ButtonStyle.SECONDARY, "delete", label="Delete"
-            )
-            .add_interactive_button(
-                hikari.ButtonStyle.SECONDARY, "refresh_code", label="Refresh Code"
+                hikari.ButtonStyle.SECONDARY, ComponentID.DELETE, label="Delete"
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
-                "toggle_mode",
+                ComponentID.REFRESH_CODE,
+                label="Refresh Code",
+            )
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY,
+                ComponentID.TOGGLE_MODE,
                 label="Mode: Execute"
                 if self.action is models.Action.RUN
                 else "Mode: ASM",
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
-                "language",
+                ComponentID.LANGUAGE,
                 label=f"Language: {self.language.v or 'Unknown'}",
+            )
+            .add_interactive_button(
+                hikari.ButtonStyle.SECONDARY,
+                ComponentID.STDIN,
+                label="Set STDIN",
             )
         )
 
         # code block selection
         if len(self.codes) > 1:
             select = plugin.app.rest.build_message_action_row().add_text_menu(
-                "code_block",
+                ComponentID.CODE_BLOCK,
                 placeholder="Select the code block to run",
             )
             for x, block in enumerate(self.codes):
@@ -395,41 +469,69 @@ class Instance:
             await plugin.app.rest.trigger_typing(self.channel)
 
         # try to execute code
-        att: hikari.Bytes | None = None
-        out: str | None
+        code_file: hikari.Bytes | None = None
+        stdin_file: hikari.Bytes | None = None
+        out: list[str] = [f"<@{self.requester}>"]
+
+        code_output_in_file = False
+        stdin_in_file = False
+
+        code_output: str = ""
         if self.runtime:
             ret = await self.runtime.provider.execute(self)
-            out = ret.format()
+            code_output = ret.format()
 
-            if len(out) > 1_950:
-                att = hikari.Bytes(out, "output.ansi")
-                out = None
+            if not code_output.strip():
+                out.append("Your code ran with no output.")
+                code_output = ""
+        else:
+            out.append("No runtime selected.")
+
+        stdin = self.stdin or ""
+        formatted_stdin = "\n".join(
+            f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
+        )
+
+        if len(code_output) + len(formatted_stdin) > 1_950:
+            if len(code_output) < 1_950:
+                stdin_in_file = True
+            elif len(formatted_stdin) < 1_950:
+                code_output_in_file = True
             else:
-                if out in {"", "\n"}:
-                    out = "Your code ran with no output."
-                else:
-                    out = f"```ansi\n{out}\n```"
-        else:
-            out = "No runtime selected."
+                code_output_in_file = True
+                stdin_in_file = True
 
-        if out:
-            out = f"<@{self.requester}>\n{out}"
-        else:
-            out = f"<@{self.requester}>"
+        if code_output:
+            if code_output_in_file:
+                code_file = hikari.Bytes(code_output, "code.ansi")
+            else:
+                out.append(f"```ansi\n{code_output}```")
+
+        if stdin:
+            if stdin_in_file:
+                stdin_file = hikari.Bytes(stdin, "stdin.txt")
+            else:
+                out.append(f"```ansi\n{formatted_stdin}```")
 
         # send message
+        out_str = "\n".join(out)
         rows = self.components()
+        attachments = list(filter(None, [code_file, stdin_file]))
         if self.response:
             await plugin.app.rest.edit_message(
-                self.channel, self.response, out, components=rows, attachment=att
+                self.channel,
+                self.response,
+                out_str,
+                components=rows,
+                attachments=attachments,
             )
         else:
             resp = await plugin.app.rest.create_message(
                 self.channel,
-                out,
+                out_str,
                 reply=self.message,
                 components=rows,
-                attachment=att or hikari.UNDEFINED,
+                attachments=attachments,
                 user_mentions=[self.requester],
             )
             self.response = resp.id
