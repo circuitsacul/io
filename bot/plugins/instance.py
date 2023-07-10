@@ -502,7 +502,7 @@ class Instance:
             if code_output_in_file:
                 code_attr = hikari.Bytes(code_output, "code.ansi")
             else:
-                out += [f"```ansi\n{code_output}```"]
+                out.append(f"```ansi\n{code_output}```")
 
         if stdin:
             if stdin_in_file:
