@@ -487,7 +487,7 @@ class Instance:
         else:
             out.append("No runtime selected.")
 
-        stdin: str = self.stdin or ""
+        stdin = self.stdin or ""
 
         if len(code_output) + len(stdin) > 1_950:
             if len(code_output) < 1_950:
