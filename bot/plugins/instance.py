@@ -495,6 +495,7 @@ class Instance:
             elif len(stdin) < 1_950:
                 code_output_in_file = True
             else:
+                code_output_in_file = True
                 stdin_in_file = True
 
         if code_output:
