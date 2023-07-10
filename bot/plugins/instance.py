@@ -488,11 +488,15 @@ class Instance:
             out.append("No runtime selected.")
 
         stdin = self.stdin or ""
+        formatted_stdin = "\n".join(
+            f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
+        )
 
-        if len(code_output) + len(stdin) > 1_950:
+
+        if len(code_output) + len(formatted_stdin) > 1_950:
             if len(code_output) < 1_950:
                 stdin_in_file = True
-            elif len(stdin) < 1_950:
+            elif len(formatted_stdin) < 1_950:
                 code_output_in_file = True
             else:
                 code_output_in_file = True
@@ -508,10 +512,7 @@ class Instance:
             if stdin_in_file:
                 stdin_file = hikari.Bytes(stdin, "stdin.txt")
             else:
-                stdin = "\n".join(
-                    f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
-                )
-                out += [f"```ansi\n{stdin}```"]
+                out += [f"```ansi\n{formatted_stdin}```"]
 
         # send message
         out_str = "\n".join(out)
