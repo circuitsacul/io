@@ -469,8 +469,8 @@ class Instance:
             await plugin.app.rest.trigger_typing(self.channel)
 
         # try to execute code
-        code_attr: hikari.Bytes | None = None
-        stdin_attr: hikari.Bytes | None = None
+        code_file: hikari.Bytes | None = None
+        stdin_file: hikari.Bytes | None = None
         out: list[str] = [f"<@{self.requester}>"]
 
         code_output_in_file = False
@@ -496,17 +496,16 @@ class Instance:
                 code_output_in_file = True
             else:
                 stdin_in_file = True
-                code_output_in_file = True
 
         if code_output:
             if code_output_in_file:
-                code_attr = hikari.Bytes(code_output, "code.ansi")
+                code_file = hikari.Bytes(code_output, "code.ansi")
             else:
                 out.append(f"```ansi\n{code_output}```")
 
         if stdin:
             if stdin_in_file:
-                stdin_attr = hikari.Bytes(stdin, "stdin.txt")
+                stdin_file = hikari.Bytes(stdin, "stdin.txt")
             else:
                 stdin = "\n".join(
                     f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
@@ -516,7 +515,7 @@ class Instance:
         # send message
         out_str = "\n".join(out)
         rows = self.components()
-        attachments = list(filter(None, [code_attr, stdin_attr]))
+        attachments = list(filter(None, [code_file, stdin_file]))
         if self.response:
             await plugin.app.rest.edit_message(
                 self.channel,
