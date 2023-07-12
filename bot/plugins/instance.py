@@ -523,7 +523,7 @@ class Instance:
                 self.response,
                 out_str,
                 components=rows,
-                attachments=attachments,
+                attachments=attachments or None,
             )
         else:
             resp = await plugin.app.rest.create_message(
