@@ -511,7 +511,7 @@ class Instance:
             if stdin_in_file:
                 stdin_file = hikari.Bytes(stdin, "stdin.txt")
             else:
-                out.append(f"```ansi\n{formatted_stdin}```")
+                out += [f"```ansi\n{formatted_stdin}```"]
 
         # send message
         out_str = "\n".join(out)
@@ -523,7 +523,7 @@ class Instance:
                 self.response,
                 out_str,
                 components=rows,
-                attachments=attachments,
+                attachments=attachments or None,
             )
         else:
             resp = await plugin.app.rest.create_message(
