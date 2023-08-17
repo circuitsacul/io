@@ -13,4 +13,6 @@ poetry run python -m bot
 ```
 
 ## Credits
-Most of the credit goes to [lunarmagpie/io](https://github.com/lunarmagpie/io), as this bot was inspired and heavily based on it.
+- [@Lunarmagpie](https://github.com/lunarmagpie) for creating the [original io](https://github.com/lunarmagpie/io), which this project was based on
+- [@Enderchief](https://github.com/Enderchief) for hosting a [piston fork](https://github.com/Endercheif/piston) with additional languages
+- [Compiler Explorer](https://github.com/compiler-explorer/compiler-explorer) and [piston](https://github.com/engineer-man/piston) for creating free-to-use code execution tools
