@@ -17,3 +17,4 @@ poetry run python -m bot
 - [@Enderchief](https://github.com/Enderchief) for hosting a [piston fork](https://github.com/Endercheif/piston) with additional languages
 - [Compiler Explorer](https://github.com/compiler-explorer/compiler-explorer) and [piston](https://github.com/engineer-man/piston) for creating free-to-use code execution tools
 - [@trag1c](https://github.com/trag1c) for coming up with the name
+- [@isFakeAccount](https://github.com/isFakeAccount) for adding support for compiler and runtime args
