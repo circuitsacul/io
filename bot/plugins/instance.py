@@ -30,11 +30,12 @@ class ComponentID(enum.StrEnum):
     INSTRUCTION_SET = "instruction_set"
     COMPILER_TYPE = "compiler_type"
     VERSION = "version"
-    INPUT_ARGS = "input_args"
+    INPUTS = "inputs"
 
 
 class ModalID(enum.StrEnum):
     LANGUAGE = "language"
+    INPUTS = "inputs"
     STDIN = "stdin"
     COMPTIME = "comptime"
     RUNTIME = "runtime"
@@ -97,8 +98,10 @@ async def on_modal_interaction(event: hikari.InteractionCreateEvent) -> None:
                 inst.update_language(lang, False)
             else:
                 inst.update_language(lang, True)
-        case ModalID.STDIN:
+        case ModalID.INPUTS:
             inst.stdin = event.interaction.components[0].components[0].value
+            inst.comptime_args = event.interaction.components[1].components[0].value
+            inst.runtime_args = event.interaction.components[2].components[0].value
 
     await event.app.rest.create_interaction_response(
         event.interaction,
@@ -185,12 +188,12 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
                 inst.version = v[0]
             else:
                 inst.version = None
-        case ComponentID.INPUT_ARGS:
+        case ComponentID.INPUTS:
             await event.app.rest.create_modal_response(
                 event.interaction,
                 event.interaction.token,
-                title="Set Input args",
-                custom_id=ModalID.STDIN,
+                title="Set Inputs",
+                custom_id=ModalID.INPUTS,
                 components=create_input_args_modal(event, inst),
             )
             return
@@ -224,7 +227,7 @@ def create_input_args_modal(
     comptime_modal_row.add_text_input(
         ModalID.COMPTIME,
         "Comptime Args",
-        value=msg_instance.stdin or hikari.UNDEFINED,
+        value=msg_instance.comptime_args or hikari.UNDEFINED,
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
         placeholder="Command Line Parameters - 1 per line",
@@ -234,7 +237,7 @@ def create_input_args_modal(
     runtime_modal_row.add_text_input(
         ModalID.RUNTIME,
         "Runtime Args",
-        value=msg_instance.stdin or hikari.UNDEFINED,
+        value=msg_instance.runtime_args or hikari.UNDEFINED,
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
         placeholder="Command Line Parameters - 1 per line",
@@ -282,6 +285,8 @@ class Instance:
 
     code: t.Optional[models.Code] = None
     stdin: str | None = None
+    comptime_args: str | None = None
+    runtime_args: str | None = None
     language: Setting[t.Optional[str]] = Setting.make(None)
     action: models.Action = models.Action.RUN
     instruction_set: str | None = None
@@ -463,8 +468,8 @@ class Instance:
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
-                ComponentID.INPUT_ARGS,
-                label="Set Input Args",
+                ComponentID.INPUTS,
+                label="Set Inputs",
             )
         )
 

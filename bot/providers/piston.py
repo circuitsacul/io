@@ -63,6 +63,9 @@ class Piston(Provider):
             "version": version,
             "files": [{"content": transform_code(lang, instance.code.code)}],
             "stdin": instance.stdin,
+            "args": instance.runtime_args.splitlines()
+            if instance.runtime_args is not None
+            else [],
         }
 
         async with self.session.post(self.URL + "execute", json=post_data) as resp:

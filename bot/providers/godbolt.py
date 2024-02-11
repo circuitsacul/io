@@ -94,8 +94,18 @@ class GodBolt(Provider):
             "lang": lang.lower(),
             "options": {
                 "compilerOptions": {"executorRequest": True},
-                "executeParameters": {"stdin": instance.stdin},
+                "executeParameters": {
+                    "stdin": instance.stdin,
+                    "args": (
+                        instance.runtime_args.splitlines()
+                        if instance.runtime_args is not None
+                        else []
+                    ),
+                },
                 "filters": {"execute": True},
+                "userArguments": instance.comptime_args.replace("\n", " ")
+                if instance.comptime_args is not None
+                else "",
             },
         }
 
@@ -134,6 +144,9 @@ class GodBolt(Provider):
                     "libraryCode": False,
                     "trim": False,
                 },
+                "userArguments": instance.comptime_args.replace("\n", " ")
+                if instance.comptime_args is not None
+                else "",
             },
         }
 
