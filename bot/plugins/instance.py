@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 import crescent
 import hikari
+from hikari.api import special_endpoints
 
 from bot import models
 from bot.app import Plugin
@@ -212,7 +213,7 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
 def create_input_args_modal(
     event: hikari.InteractionCreateEvent,
     msg_instance: Instance,
-):
+) -> list[special_endpoints.ModalActionRowBuilder]:
     stdin_modal_row = event.app.rest.build_modal_action_row()
     stdin_modal_row.add_text_input(
         ModalID.STDIN,
@@ -232,7 +233,7 @@ def create_input_args_modal(
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
         max_length=255,
-        placeholder="Command Line Parameters - 1 per line",
+        placeholder="Comptime Args - 1 per line",
     )
 
     runtime_modal_row = event.app.rest.build_modal_action_row()
@@ -243,7 +244,7 @@ def create_input_args_modal(
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
         max_length=255,
-        placeholder="Command Line Parameters - 1 per line",
+        placeholder="Runtime Args - 1 per line",
     )
 
     return [stdin_modal_row, comptime_modal_row, runtime_modal_row]
@@ -529,23 +530,14 @@ class Instance:
             out.append("No runtime selected.")
 
         stdin = self.stdin or ""
-        formatted_stdin = "\n".join(f"{line}" for line in stdin.splitlines())
-
         comptime_args = self.comptime_args or ""
-        formatted_comptime_args = "\n".join(
-            f"{line}" for line in comptime_args.splitlines()
-        )
-
         runtime_args = self.runtime_args or ""
-        formatted_runtime_args = "\n".join(
-            f"{line}" for line in runtime_args.splitlines()
-        )
 
-        message_length = len(code_output) + len(formatted_stdin)
+        message_length = len(code_output) + len(stdin)
         if message_length > 1_950:
             if len(code_output) < 1_950:
                 stdin_in_file = True
-            elif len(formatted_stdin) < 1_950:
+            elif len(stdin) < 1_950:
                 code_output_in_file = True
             else:
                 code_output_in_file = True
@@ -561,13 +553,13 @@ class Instance:
             if stdin_in_file:
                 stdin_file = hikari.Bytes(stdin, "stdin.txt")
             else:
-                out.append(f"STDIN:\n```ansi\n{formatted_stdin}```")
+                out.append(f"STDIN:\n```ansi\n{stdin}```")
 
         if comptime_args:
-            out.append(f"COMPTIME ARGS:\n```ansi\n{formatted_comptime_args}```")
+            out.append(f"COMPTIME ARGS:\n```ansi\n{comptime_args}```")
 
         if runtime_args:
-            out.append(f"RUNTIME ARGS:\n```ansi\n{formatted_runtime_args}```")
+            out.append(f"RUNTIME ARGS:\n```ansi\n{runtime_args}```")
 
         # send message
         out_str = "\n".join(out)
