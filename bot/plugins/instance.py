@@ -225,12 +225,12 @@ def create_input_args_modal(
     comptime_modal_row = event.app.rest.build_modal_action_row()
     comptime_modal_row.add_text_input(
         "comptime",
-        "Comptime Args",
+        "Compiler Args",
         value=msg_instance.comptime_args or hikari.UNDEFINED,
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
         max_length=255,
-        placeholder="Comptime Args - 1 per line",
+        placeholder="Compiler Args - 1 per line",
     )
 
     runtime_modal_row = event.app.rest.build_modal_action_row()
