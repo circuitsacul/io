@@ -46,6 +46,14 @@ def get_text(obj: object, *path: str) -> str | None:
 class GodBolt(Provider):
     URL = CONFIG.GODBOLT_URL
 
+    @property
+    def supports_compiler_args(self) -> bool:
+        return True
+
+    @property
+    def supports_runtime_args(self) -> bool:
+        return True
+
     async def startup(self) -> None:
         self._session = aiohttp.ClientSession(headers={"Accept": "application/json"})
 
@@ -94,8 +102,18 @@ class GodBolt(Provider):
             "lang": lang.lower(),
             "options": {
                 "compilerOptions": {"executorRequest": True},
-                "executeParameters": {"stdin": instance.stdin},
+                "executeParameters": {
+                    "stdin": instance.stdin,
+                    "args": (
+                        instance.runtime_args.splitlines()
+                        if instance.runtime_args is not None
+                        else []
+                    ),
+                },
                 "filters": {"execute": True},
+                "userArguments": instance.comptime_args.replace("\n", " ")
+                if instance.comptime_args is not None
+                else "",
             },
         }
 
@@ -134,6 +152,9 @@ class GodBolt(Provider):
                     "libraryCode": False,
                     "trim": False,
                 },
+                "userArguments": instance.comptime_args.replace("\n", " ")
+                if instance.comptime_args is not None
+                else "",
             },
         }
 

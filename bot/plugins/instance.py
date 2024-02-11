@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 import crescent
 import hikari
+from hikari.api import special_endpoints
 
 from bot import models
 from bot.app import Plugin
@@ -30,12 +31,12 @@ class ComponentID(enum.StrEnum):
     INSTRUCTION_SET = "instruction_set"
     COMPILER_TYPE = "compiler_type"
     VERSION = "version"
-    STDIN = "stdin"
+    INPUTS = "inputs"
 
 
 class ModalID(enum.StrEnum):
     LANGUAGE = "language"
-    STDIN = "stdin"
+    INPUTS = "inputs"
 
 
 def next_in_default_chain(path: list[str | None]) -> str | None:
@@ -95,8 +96,10 @@ async def on_modal_interaction(event: hikari.InteractionCreateEvent) -> None:
                 inst.update_language(lang, False)
             else:
                 inst.update_language(lang, True)
-        case ModalID.STDIN:
+        case ModalID.INPUTS:
             inst.stdin = event.interaction.components[0].components[0].value
+            inst.comptime_args = event.interaction.components[1].components[0].value
+            inst.runtime_args = event.interaction.components[2].components[0].value
 
     await event.app.rest.create_interaction_response(
         event.interaction,
@@ -183,19 +186,13 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
                 inst.version = v[0]
             else:
                 inst.version = None
-        case ComponentID.STDIN:
+        case ComponentID.INPUTS:
             await event.app.rest.create_modal_response(
                 event.interaction,
                 event.interaction.token,
-                title="Set STDIN",
-                custom_id=ModalID.STDIN,
-                component=event.app.rest.build_modal_action_row().add_text_input(
-                    ModalID.STDIN,
-                    "Set STDIN",
-                    value=inst.stdin or hikari.UNDEFINED,
-                    required=False,
-                    style=hikari.TextInputStyle.PARAGRAPH,
-                ),
+                title="Set Inputs",
+                custom_id=ModalID.INPUTS,
+                components=create_input_args_modal(event, inst),
             )
             return
 
@@ -208,6 +205,46 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
         components=inst.components(),
     )
     await inst.execute()
+
+
+def create_input_args_modal(
+    event: hikari.InteractionCreateEvent,
+    msg_instance: Instance,
+) -> list[special_endpoints.ModalActionRowBuilder]:
+    stdin_modal_row = event.app.rest.build_modal_action_row()
+    stdin_modal_row.add_text_input(
+        "stdin",
+        "Set STDIN",
+        value=msg_instance.stdin or hikari.UNDEFINED,
+        required=False,
+        style=hikari.TextInputStyle.PARAGRAPH,
+        max_length=1024,
+        placeholder="Standard Input",
+    )
+
+    comptime_modal_row = event.app.rest.build_modal_action_row()
+    comptime_modal_row.add_text_input(
+        "comptime",
+        "Compiler Args",
+        value=msg_instance.comptime_args or hikari.UNDEFINED,
+        required=False,
+        style=hikari.TextInputStyle.PARAGRAPH,
+        max_length=255,
+        placeholder="Compiler Args - 1 per line",
+    )
+
+    runtime_modal_row = event.app.rest.build_modal_action_row()
+    runtime_modal_row.add_text_input(
+        "runtime",
+        "Runtime Args",
+        value=msg_instance.runtime_args or hikari.UNDEFINED,
+        required=False,
+        style=hikari.TextInputStyle.PARAGRAPH,
+        max_length=255,
+        placeholder="Runtime Args - 1 per line",
+    )
+
+    return [stdin_modal_row, comptime_modal_row, runtime_modal_row]
 
 
 T = t.TypeVar("T")
@@ -225,10 +262,6 @@ class Setting(t.Generic[T]):
     def user_update(self, v: T) -> None:
         self.v = v
         self.overwritten = True
-
-    @classmethod
-    def make(cls, v: T) -> Setting[T]:
-        return field(default_factory=lambda: cls(v))
 
 
 class Selector(t.NamedTuple):
@@ -249,7 +282,9 @@ class Instance:
 
     code: t.Optional[models.Code] = None
     stdin: str | None = None
-    language: Setting[t.Optional[str]] = Setting.make(None)
+    comptime_args: str | None = None
+    runtime_args: str | None = None
+    language: Setting[t.Optional[str]] = field(default_factory=lambda: Setting(None))
     action: models.Action = models.Action.RUN
     instruction_set: str | None = None
     compiler_type: str | None = None
@@ -419,9 +454,9 @@ class Instance:
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
                 ComponentID.TOGGLE_MODE,
-                label="Mode: Execute"
-                if self.action is models.Action.RUN
-                else "Mode: ASM",
+                label=(
+                    "Mode: Execute" if self.action is models.Action.RUN else "Mode: ASM"
+                ),
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
@@ -430,8 +465,8 @@ class Instance:
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
-                ComponentID.STDIN,
-                label="Set STDIN",
+                ComponentID.INPUTS,
+                label="Set Inputs",
             )
         )
 
@@ -470,11 +505,7 @@ class Instance:
 
         # try to execute code
         code_file: hikari.Bytes | None = None
-        stdin_file: hikari.Bytes | None = None
         out: list[str] = [f"<@{self.requester}>"]
-
-        code_output_in_file = False
-        stdin_in_file = False
 
         code_output: str = ""
         if self.runtime:
@@ -488,35 +519,38 @@ class Instance:
             out.append("No runtime selected.")
 
         stdin = self.stdin or ""
-        formatted_stdin = "\n".join(
-            f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
+        comptime_args = self.comptime_args or ""
+        runtime_args = self.runtime_args or ""
+
+        message_length = (
+            len(code_output) + len(stdin) + len(comptime_args) + len(runtime_args)
         )
 
-        if len(code_output) + len(formatted_stdin) > 1_950:
-            if len(code_output) < 1_950:
-                stdin_in_file = True
-            elif len(formatted_stdin) < 1_950:
-                code_output_in_file = True
-            else:
-                code_output_in_file = True
-                stdin_in_file = True
-
         if code_output:
-            if code_output_in_file:
+            if message_length > 1_950:
                 code_file = hikari.Bytes(code_output, "code.ansi")
             else:
                 out.append(f"```ansi\n{code_output}```")
 
         if stdin:
-            if stdin_in_file:
-                stdin_file = hikari.Bytes(stdin, "stdin.txt")
-            else:
-                out.append(f"```ansi\n{formatted_stdin}```")
+            out.append(f"STDIN:\n```ansi\n{stdin}```")
+
+        if comptime_args:
+            warn = ""
+            if self.runtime and not self.runtime.provider.supports_compiler_args:
+                warn = " (Not supported by current runtime)"
+            out.append(f"Compiler Args{warn}:\n```ansi\n{comptime_args}```")
+
+        if runtime_args:
+            warn = ""
+            if self.runtime and not self.runtime.provider.supports_runtime_args:
+                warn = " (Not supported by current runtime)"
+            out.append(f"Runtime Args{warn}:\n```ansi\n{runtime_args}```")
 
         # send message
         out_str = "\n".join(out)
         rows = self.components()
-        attachments = list(filter(None, [code_file, stdin_file]))
+        attachments = [code_file] if code_file else []
         if self.response:
             await plugin.app.rest.edit_message(
                 self.channel,

@@ -17,6 +17,14 @@ if t.TYPE_CHECKING:
 class Piston(Provider):
     URL = CONFIG.PISTON_URL
 
+    @property
+    def supports_compiler_args(self) -> bool:
+        return False
+
+    @property
+    def supports_runtime_args(self) -> bool:
+        return True
+
     def __init__(self, model: Model) -> None:
         self.aliases: dict[str, str] = {}
         super().__init__(model)
@@ -63,6 +71,9 @@ class Piston(Provider):
             "version": version,
             "files": [{"content": transform_code(lang, instance.code.code)}],
             "stdin": instance.stdin,
+            "args": instance.runtime_args.splitlines()
+            if instance.runtime_args is not None
+            else [],
         }
 
         async with self.session.post(self.URL + "execute", json=post_data) as resp:
