@@ -220,6 +220,7 @@ def create_input_args_modal(
         value=msg_instance.stdin or hikari.UNDEFINED,
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
+        max_length=1024,
         placeholder="Standard Input",
     )
 
@@ -230,6 +231,7 @@ def create_input_args_modal(
         value=msg_instance.comptime_args or hikari.UNDEFINED,
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
+        max_length=255,
         placeholder="Command Line Parameters - 1 per line",
     )
 
@@ -240,6 +242,7 @@ def create_input_args_modal(
         value=msg_instance.runtime_args or hikari.UNDEFINED,
         required=False,
         style=hikari.TextInputStyle.PARAGRAPH,
+        max_length=255,
         placeholder="Command Line Parameters - 1 per line",
     )
 
@@ -526,11 +529,20 @@ class Instance:
             out.append("No runtime selected.")
 
         stdin = self.stdin or ""
-        formatted_stdin = "\n".join(
-            f"\x1b[1;33mIN:\x1b[0m {line}" for line in stdin.splitlines()
+        formatted_stdin = "\n".join(f"{line}" for line in stdin.splitlines())
+
+        comptime_args = self.comptime_args or ""
+        formatted_comptime_args = "\n".join(
+            f"{line}" for line in comptime_args.splitlines()
         )
 
-        if len(code_output) + len(formatted_stdin) > 1_950:
+        runtime_args = self.runtime_args or ""
+        formatted_runtime_args = "\n".join(
+            f"{line}" for line in runtime_args.splitlines()
+        )
+
+        message_length = len(code_output) + len(formatted_stdin)
+        if message_length > 1_950:
             if len(code_output) < 1_950:
                 stdin_in_file = True
             elif len(formatted_stdin) < 1_950:
@@ -549,7 +561,13 @@ class Instance:
             if stdin_in_file:
                 stdin_file = hikari.Bytes(stdin, "stdin.txt")
             else:
-                out.append(f"```ansi\n{formatted_stdin}```")
+                out.append(f"STDIN:\n```ansi\n{formatted_stdin}```")
+
+        if comptime_args:
+            out.append(f"COMPTIME ARGS:\n```ansi\n{formatted_comptime_args}```")
+
+        if runtime_args:
+            out.append(f"RUNTIME ARGS:\n```ansi\n{formatted_runtime_args}```")
 
         # send message
         out_str = "\n".join(out)
