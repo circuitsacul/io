@@ -46,6 +46,14 @@ def get_text(obj: object, *path: str) -> str | None:
 class GodBolt(Provider):
     URL = CONFIG.GODBOLT_URL
 
+    @property
+    def supports_compiler_args(self) -> bool:
+        return True
+
+    @property
+    def supports_runtime_args(self) -> bool:
+        return True
+
     async def startup(self) -> None:
         self._session = aiohttp.ClientSession(headers={"Accept": "application/json"})
 

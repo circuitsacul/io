@@ -17,6 +17,14 @@ if t.TYPE_CHECKING:
 class Piston(Provider):
     URL = CONFIG.PISTON_URL
 
+    @property
+    def supports_compiler_args(self) -> bool:
+        return False
+
+    @property
+    def supports_runtime_args(self) -> bool:
+        return True
+
     def __init__(self, model: Model) -> None:
         self.aliases: dict[str, str] = {}
         super().__init__(model)

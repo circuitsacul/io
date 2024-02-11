@@ -18,6 +18,14 @@ class Provider(abc.ABC):
         self.runtimes = models.RuntimeTree()
         self._session: aiohttp.ClientSession | None = None
 
+    @abc.abstractproperty
+    def supports_compiler_args(self) -> bool:
+        ...
+
+    @abc.abstractproperty
+    def supports_runtime_args(self) -> bool:
+        ...
+
     @property
     def session(self) -> aiohttp.ClientSession:
         assert self._session, "aiohttp session not initialized"

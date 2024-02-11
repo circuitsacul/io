@@ -536,10 +536,16 @@ class Instance:
             out.append(f"STDIN:\n```ansi\n{stdin}```")
 
         if comptime_args:
-            out.append(f"COMPTIME ARGS:\n```ansi\n{comptime_args}```")
+            warn = ""
+            if self.runtime and not self.runtime.provider.supports_compiler_args:
+                warn = " (Not supported by current runtime)"
+            out.append(f"Compiler Args{warn}:\n```ansi\n{comptime_args}```")
 
         if runtime_args:
-            out.append(f"RUNTIME ARGS:\n```ansi\n{runtime_args}```")
+            warn = ""
+            if self.runtime and not self.runtime.provider.supports_runtime_args:
+                warn = " (Not supported by current runtime)"
+            out.append(f"Runtime Args{warn}:\n```ansi\n{runtime_args}```")
 
         # send message
         out_str = "\n".join(out)
