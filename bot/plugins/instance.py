@@ -30,12 +30,14 @@ class ComponentID(enum.StrEnum):
     INSTRUCTION_SET = "instruction_set"
     COMPILER_TYPE = "compiler_type"
     VERSION = "version"
-    STDIN = "stdin"
+    INPUT_ARGS = "input_args"
 
 
 class ModalID(enum.StrEnum):
     LANGUAGE = "language"
     STDIN = "stdin"
+    COMPTIME = "comptime"
+    RUNTIME = "runtime"
 
 
 def next_in_default_chain(path: list[str | None]) -> str | None:
@@ -183,19 +185,13 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
                 inst.version = v[0]
             else:
                 inst.version = None
-        case ComponentID.STDIN:
+        case ComponentID.INPUT_ARGS:
             await event.app.rest.create_modal_response(
                 event.interaction,
                 event.interaction.token,
-                title="Set STDIN",
+                title="Set Input args",
                 custom_id=ModalID.STDIN,
-                component=event.app.rest.build_modal_action_row().add_text_input(
-                    ModalID.STDIN,
-                    "Set STDIN",
-                    value=inst.stdin or hikari.UNDEFINED,
-                    required=False,
-                    style=hikari.TextInputStyle.PARAGRAPH,
-                ),
+                components=create_input_args_modal(event, inst),
             )
             return
 
@@ -208,6 +204,43 @@ async def on_component_interaction(event: hikari.InteractionCreateEvent) -> None
         components=inst.components(),
     )
     await inst.execute()
+
+
+def create_input_args_modal(
+    event: hikari.InteractionCreateEvent,
+    msg_instance: Instance,
+):
+    stdin_modal_row = event.app.rest.build_modal_action_row()
+    stdin_modal_row.add_text_input(
+        ModalID.STDIN,
+        "Set STDIN",
+        value=msg_instance.stdin or hikari.UNDEFINED,
+        required=False,
+        style=hikari.TextInputStyle.PARAGRAPH,
+        placeholder="Standard Input",
+    )
+
+    comptime_modal_row = event.app.rest.build_modal_action_row()
+    comptime_modal_row.add_text_input(
+        ModalID.COMPTIME,
+        "Comptime Args",
+        value=msg_instance.stdin or hikari.UNDEFINED,
+        required=False,
+        style=hikari.TextInputStyle.PARAGRAPH,
+        placeholder="Command Line Parameters - 1 per line",
+    )
+
+    runtime_modal_row = event.app.rest.build_modal_action_row()
+    runtime_modal_row.add_text_input(
+        ModalID.RUNTIME,
+        "Runtime Args",
+        value=msg_instance.stdin or hikari.UNDEFINED,
+        required=False,
+        style=hikari.TextInputStyle.PARAGRAPH,
+        placeholder="Command Line Parameters - 1 per line",
+    )
+
+    return [stdin_modal_row, comptime_modal_row, runtime_modal_row]
 
 
 T = t.TypeVar("T")
@@ -419,9 +452,9 @@ class Instance:
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
                 ComponentID.TOGGLE_MODE,
-                label="Mode: Execute"
-                if self.action is models.Action.RUN
-                else "Mode: ASM",
+                label=(
+                    "Mode: Execute" if self.action is models.Action.RUN else "Mode: ASM"
+                ),
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
@@ -430,8 +463,8 @@ class Instance:
             )
             .add_interactive_button(
                 hikari.ButtonStyle.SECONDARY,
-                ComponentID.STDIN,
-                label="Set STDIN",
+                ComponentID.INPUT_ARGS,
+                label="Set Input Args",
             )
         )
 
