@@ -27,7 +27,7 @@ aiohttp = "^3.8.4"
 dahlia = "^2.3.2"
 
 [tool.poetry.group.dev.dependencies]
-nox = "^2023.4.22"
+nox = "^2024.3.2"
 
 [tool.poetry.group.typing.dependencies]
 mypy = "^1.1.1"
