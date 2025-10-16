@@ -11,7 +11,7 @@ from hikari.api import special_endpoints
 
 from bot import models
 from bot.app import Plugin
-from bot.lang_defaults import DEFAULTS
+from bot.lang_defaults import ASM_DEFAULTS, RUN_DEFAULTS
 from bot.utils import parse
 
 plugin = Plugin()
@@ -39,8 +39,12 @@ class ModalID(enum.StrEnum):
     INPUTS = "inputs"
 
 
-def next_in_default_chain(path: list[str | None]) -> str | None:
-    tree = DEFAULTS
+def next_in_default_chain(path: list[str | None], action: models.Action) -> str | None:
+    match action:
+        case models.Action.RUN:
+            tree = RUN_DEFAULTS
+        case models.Action.ASM:
+            tree = ASM_DEFAULTS
     for k in path:
         if isinstance(tree, str):
             return None
@@ -56,12 +60,15 @@ def next_in_default_chain(path: list[str | None]) -> str | None:
 
 
 def get_or_first(
-    dct: dict[str | None, V], key: str | None, path: list[str | None]
+    dct: dict[str | None, V],
+    key: str | None,
+    path: list[str | None],
+    action: models.Action,
 ) -> tuple[str | None, V] | None:
     with contextlib.suppress(KeyError):
         return (key, dct[key])
 
-    if k := next_in_default_chain(path):
+    if k := next_in_default_chain(path, action):
         with contextlib.suppress(KeyError):
             return (k, dct[k])
 
@@ -337,7 +344,7 @@ class Instance:
         if instructions := tree.get(self.language.v):
             path.append(self.language.v)
             if instruction_set_select := get_or_first(
-                instructions, self.instruction_set, path
+                instructions, self.instruction_set, path, self.action
             ):
                 instruction_set, compilers = instruction_set_select
                 if len(instructions) > 1:
@@ -351,7 +358,7 @@ class Instance:
                 path.append(instruction_set)
 
                 if compiler_type_select := get_or_first(
-                    compilers, self.compiler_type, path
+                    compilers, self.compiler_type, path, self.action
                 ):
                     compiler, versions = compiler_type_select
                     if len(compilers) > 1:
@@ -364,7 +371,9 @@ class Instance:
                         )
                     path.append(compiler)
 
-                    if version_select := get_or_first(versions, self.version, path):
+                    if version_select := get_or_first(
+                        versions, self.version, path, self.action
+                    ):
                         version, _ = version_select
                         selectors.append(
                             Selector(
@@ -390,15 +399,15 @@ class Instance:
         if not (tree2 := tree.get(lang)):
             return None
 
-        if not (tree3 := get_or_first(tree2, self.instruction_set, path)):
+        if not (tree3 := get_or_first(tree2, self.instruction_set, path, self.action)):
             return None
         self.instruction_set = tree3[0]
         path.append(tree3[0])
-        if not (tree4 := get_or_first(tree3[1], self.compiler_type, path)):
+        if not (tree4 := get_or_first(tree3[1], self.compiler_type, path, self.action)):
             return None
         self.compiler_type = tree4[0]
         path.append(tree4[0])
-        tree5 = get_or_first(tree4[1], self.version, path)
+        tree5 = get_or_first(tree4[1], self.version, path, self.action)
         if tree5:
             self.version = tree5[0]
             return tree5[1]
