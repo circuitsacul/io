@@ -60,7 +60,10 @@ def next_in_default_chain(path: list[str | None], action: models.Action) -> str 
 
 
 def get_or_first(
-    dct: dict[str | None, V], key: str | None, path: list[str | None], action: models.Action
+    dct: dict[str | None, V],
+    key: str | None,
+    path: list[str | None],
+    action: models.Action,
 ) -> tuple[str | None, V] | None:
     with contextlib.suppress(KeyError):
         return (key, dct[key])
@@ -368,7 +371,9 @@ class Instance:
                         )
                     path.append(compiler)
 
-                    if version_select := get_or_first(versions, self.version, path, self.action):
+                    if version_select := get_or_first(
+                        versions, self.version, path, self.action
+                    ):
                         version, _ = version_select
                         selectors.append(
                             Selector(
