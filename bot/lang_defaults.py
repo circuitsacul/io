@@ -1,7 +1,7 @@
 RUN_DEFAULTS = {
     "python": "piston",
     "rust": {"amd64": "rust"},
-    "go": {"amd64": "none"},
+    "go": {"amd64": "golang"},
     "typescript": "piston",
     "c": {
         "amd64": {
@@ -24,7 +24,7 @@ RUN_DEFAULTS = {
 ASM_DEFAULTS = {
     "python": {"python": "python"},
     "rust": {"amd64": "rust"},
-    "go": {"amd64": "none"},
+    "go": {"amd64": "golang"},
     "typescript": "piston",
     "c": {
         "amd64": {
