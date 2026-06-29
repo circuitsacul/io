@@ -15,19 +15,16 @@ async def on_message(event: hikari.MessageCreateEvent) -> None:
         return None
     if not (ct := event.message.content):
         return None
-    if not ct.startswith("io/"):
+    if me := plugin.app.get_me():
+        ct = ct.removeprefix(f"<@{me.id}>").strip()
+    ct = ct.removeprefix("io/").strip()
+
+    if ct.startswith("run"):
+        action = models.Action.RUN
+    elif ct.startswith("asm"):
+        action = models.Action.ASM
+    else:
         return None
-    try:
-        cmd = ct[3:].splitlines()[0].split(" ", 1)[0]
-    except KeyError:
-        return None
-    match cmd:
-        case "run":
-            action = models.Action.RUN
-        case "asm":
-            action = models.Action.ASM
-        case _:
-            return None
 
     instance = await Instance.from_original(event.message, event.author_id)
     if not instance:
